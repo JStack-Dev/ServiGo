@@ -1,0 +1,15 @@
+# Node
+node_modules/
+.env
+logs/
+coverage/
+.DS_Store
+
+# Compilados o temporales
+dist/
+build/
+tmp/
+
+# Sistema
+.vscode/
+.idea/
