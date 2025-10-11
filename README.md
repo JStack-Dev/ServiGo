@@ -1,9 +1,3 @@
-# SERVIGO – Documentación Técnica del Backend
-
-**Autor:** Jorge Juan Moscoso Chacón (JStack-dev)  
-**Fecha:** Octubre 2025  
-**Versión:** 1.0  
-
 # ServiGo — Backend (Node.js + Express 5 + MongoDB)
 
 Plataforma inteligente de servicios para el hogar (“el Uber de las urgencias domésticas”): asignación en tiempo real de profesionales cercanos, estimación de precio previa, sistema de confianza con reseñas y gamificación, pagos con Stripe, chat y notificaciones en tiempo real, y módulos de IA para clasificación de incidencias y análisis predictivo de logs/seguridad.
@@ -265,3 +259,9 @@ npm test
 
 ## Licencia
 Este proyecto se publica bajo la licencia MIT. Consulta el archivo `LICENSE` para más información.
+
+
+
+**Autor:** Jorge Juan Moscoso Chacón (JStack-dev)  
+**Fecha:** Octubre 2025  
+**Versión:** 1.0  
