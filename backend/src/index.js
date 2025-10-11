@@ -2,7 +2,7 @@
 // 🌍 ServiGo Backend (v1.0)
 // ==============================
 
-// 📦 Importamos librerías principales
+// 📦 Librerías principales
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -15,7 +15,7 @@ import { Server } from "socket.io";
 // 🧾 Logger profesional (Winston)
 import logger from "./utils/winstonLogger.js";
 
-// ⚙️ Configuración de variables de entorno
+// ⚙️ Variables de entorno
 dotenv.config();
 
 // 🚀 Inicializamos Express
@@ -27,15 +27,14 @@ const app = express();
 
 // ✅ Lista blanca de dominios permitidos
 const allowedOrigins = [
-  "http://localhost:5173",      // frontend local (React/Vite)
-  "https://servigo.app",        // dominio de producción
-  "https://www.servigo.app",    // con www
+  "http://localhost:5173", // frontend local (React/Vite)
+  "https://servigo.app", // dominio producción
+  "https://www.servigo.app", // con www
 ];
 
 // 🌐 Configuración segura de CORS
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permitir requests internas (Postman, servidor, etc.)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -43,7 +42,7 @@ const corsOptions = {
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  credentials: true, // permitir cookies o auth headers
+  credentials: true,
 };
 
 // 🧱 Configuración avanzada de Helmet
@@ -56,7 +55,7 @@ const helmetConfig = helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https:"],
       styleSrc: ["'self'", "'unsafe-inline'", "https:"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https:", "wss:"], // permite API + WebSockets
+      connectSrc: ["'self'", "https:", "wss:"],
       fontSrc: ["'self'", "https:", "data:"],
       frameSrc: ["'none'"],
     },
@@ -64,6 +63,9 @@ const helmetConfig = helmet({
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   frameguard: { action: "deny" },
 });
+
+// Importamos limitadores
+import { limiter, speedLimiter } from "./middlewares/rateLimit.middleware.js";
 
 // 🧩 Aplicamos seguridad global
 app.use(helmetConfig);
@@ -89,10 +91,18 @@ app.use((req, res, next) => {
 });
 
 // ==============================
-// 🛠️ Middlewares globales
+// 🧩 Middlewares globales
 // ==============================
 app.use(express.json());
 app.use(morgan("dev"));
+
+// ✅ Sanitización (XSS + Mongo Injection)
+import { sanitizeMiddleware } from "./middlewares/sanitize.middleware.js";
+app.use(sanitizeMiddleware);
+
+// ✅ Antifraude
+import { antifraudMiddleware } from "./middlewares/antifraud.middleware.js";
+app.use(antifraudMiddleware);
 
 // ==============================
 // 🧩 Importamos rutas
@@ -111,10 +121,11 @@ import reportRoutes from "./routes/report.routes.js";
 import logRoutes from "./routes/log.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
-import aiRoutes from "./routes/ai.routes.js"; // 🤖 IA principal
-import aiLogRoutes from "./routes/aiLog.routes.js"; // 🤖 IA análisis de logs
-import metricsRoutes from "./routes/metrics.routes.js"; // 📈 Métricas internas
-import { limiter, speedLimiter } from "./middlewares/rateLimit.middleware.js";
+import aiRoutes from "./routes/ai.routes.js";
+import aiLogRoutes from "./routes/aiLog.routes.js";
+import aiSecurityRoutes from "./routes/aiSecurity.routes.js"; // 🔐 Seguridad IA
+import metricsRoutes from "./routes/metrics.routes.js";
+
 // ==============================
 // 🔗 Asignación de rutas base
 // ==============================
@@ -134,9 +145,10 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/ai/logs", aiLogRoutes);
-app.use("/api/metrics", metricsRoutes); // 📊 Nueva ruta de métricas
+app.use("/api/ai/security", aiSecurityRoutes);
+app.use("/api/metrics", metricsRoutes);
 
-// 🌍 Endpoint de prueba rápido
+// 🌍 Endpoint rápido de test
 app.get("/api", (req, res) => {
   res.json({ mensaje: "Servidor ServiGo funcionando correctamente 🚀" });
 });
@@ -165,11 +177,11 @@ const io = new Server(server, {
   cors: { origin: allowedOrigins, credentials: true },
 });
 
-// 📦 Importamos modelos
+// 📦 Modelos
 import Message from "./models/Message.js";
 import Notification from "./models/Notification.js";
 
-// 🔔 Gestión de conexiones Socket.IO
+// 🔔 Gestión de eventos Socket.IO
 io.on("connection", (socket) => {
   logger.info(`🟢 Usuario conectado: ${socket.id}`);
   updateActiveSockets(io.engine.clientsCount);
@@ -232,25 +244,3 @@ if (process.env.NODE_ENV !== "test") {
 
 // ✅ Exportamos el servidor para Jest / Supertest
 export default server;
-
-import { applySanitization } from "./middlewares/sanitize.middleware.js";
-
-// 🧼 Sanitización global de entradas (XSS + Mongo Injection)
-applySanitization(app);
-
-import { antifraudMiddleware } from "./middlewares/antifraud.middleware.js";
-
-// 🧠 Middleware antifraude global (detección de comportamiento sospechoso)
-app.use(antifraudMiddleware);
-
-
-import aiSecurityRoutes from "./routes/aiSecurity.routes.js";
-app.use("/api", aiSecurityRoutes);
-
-import { startSchedulers } from "./utils/scheduler.js";
-
-
-if (process.env.NODE_ENV !== "test") {
-  startSchedulers();
-}
-
