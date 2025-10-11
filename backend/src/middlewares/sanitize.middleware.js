@@ -1,18 +1,38 @@
 // ==============================
-// 🧹 sanitize.middleware.js
+// 🧹 sanitize.middleware.js (Express 5 compatible)
 // ==============================
 import sanitize from "mongo-sanitize";
 
 /**
- * Middleware personalizado compatible con Express 5.
- * Limpia req.body, req.params y req.query sin modificar referencias internas.
+ * Middleware de sanitización compatible con Express 5.
+ * Limpia req.body, req.params y req.query sin reasignar propiedades inmutables.
  */
 export const sanitizeMiddleware = (req, res, next) => {
   try {
-    // Sanitiza los distintos objetos del request
-    if (req.body) req.body = sanitize(req.body);
-    if (req.params) req.params = sanitize(req.params);
-    if (req.query) req.query = sanitize(req.query);
+    // Sanitizar req.body
+    if (req.body && typeof req.body === "object") {
+      for (const key in req.body) {
+        req.body[key] = sanitize(req.body[key]);
+      }
+    }
+
+    // Sanitizar req.params
+    if (req.params && typeof req.params === "object") {
+      for (const key in req.params) {
+        req.params[key] = sanitize(req.params[key]);
+      }
+    }
+
+    // Sanitizar req.query (sin modificar el objeto original)
+    if (req.query && typeof req.query === "object") {
+      const cleanQuery = {};
+      for (const key in req.query) {
+        cleanQuery[key] = sanitize(req.query[key]);
+      }
+      // Guardamos la versión segura en una propiedad aparte
+      req.safeQuery = cleanQuery;
+    }
+
     next();
   } catch (error) {
     console.error("❌ Error en sanitización:", error.message);

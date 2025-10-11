@@ -48,26 +48,26 @@ export function startSchedulers() {
     }
   });
 
-  // ============================================================
-  // 🧠 Escáner de seguridad automático (IA + cron cada hora)
-  // ============================================================
-  cron.schedule("30 * * * *", async () => {
-    // Ejecuta a la media de cada hora para no coincidir con el recordatorio
-    console.log("🧠 Ejecutando escáner de seguridad automático...");
+//   // ============================================================
+//   // 🧠 Escáner de seguridad automático (IA + cron cada hora)
+//   // ============================================================
+//   cron.schedule("30 * * * *", async () => {
+//     // Ejecuta a la media de cada hora para no coincidir con el recordatorio
+//     console.log("🧠 Ejecutando escáner de seguridad automático...");
 
-    try {
-      const report = await analyzeSecurityPatterns();
+//     try {
+//       const report = await analyzeSecurityPatterns();
 
-      if (report.health === "inestable" || report.health === "crítico") {
-        await sendSecurityAlert({
-          title: "⚠️ Riesgo detectado en análisis de seguridad",
-          description: `Estado: ${report.health} | Problemas: ${report.mainIssues?.join(", ")}`,
-        });
-      }
+//       if (report.health === "inestable" || report.health === "crítico") {
+//         await sendSecurityAlert({
+//           title: "⚠️ Riesgo detectado en análisis de seguridad",
+//           description: `Estado: ${report.health} | Problemas: ${report.mainIssues?.join(", ")}`,
+//         });
+//       }
 
-      console.log(`🧩 Estado del sistema: ${report.health || "sin datos"}`);
-    } catch (error) {
-      console.error("❌ Error en el escáner de seguridad:", error.message);
-    }
-  });
+//       console.log(`🧩 Estado del sistema: ${report.health || "sin datos"}`);
+//     } catch (error) {
+//       console.error("❌ Error en el escáner de seguridad:", error.message);
+//     }
+//   });
 }
