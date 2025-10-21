@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* 🌍 Estilos globales ServiGo */
+:root {
+  color-scheme: light dark;
+}
+
+/* 🌞 Modo claro */
+body {
+  background-color: #f8f9fa; /* neutral.light */
+  color: #1f2937; /* neutral.dark */
+  font-family: "Poppins", system-ui, sans-serif;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* 🌙 Modo oscuro */
+html.dark body {
+  background-color: #1f2937; /* neutral.dark */
+  color: #f8f9fa; /* neutral.light */
+}
+
+/* 🔠 Tipografía */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: bold;
+}
+
+/* 🔘 Botones */
+button {
+  transition: all 0.2s ease;
+}

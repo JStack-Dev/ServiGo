@@ -9,7 +9,10 @@ import { verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
+// 📥 Obtener todas las notificaciones del usuario autenticado
 router.get("/", verifyToken, getUserNotifications);
+
+// ✅ Marcar una notificación específica como leída
 router.patch("/:id/read", verifyToken, markAsRead);
 
 export default router;

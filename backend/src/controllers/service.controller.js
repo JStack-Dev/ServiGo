@@ -1,5 +1,10 @@
+// ==============================
+// 💼 Service Controller – ServiGo
+// ==============================
+
 import Service from "../models/Service.js";
 import User from "../models/User.js";
+import Notification from "../models/Notification.js"; // ✅ Nuevo modelo
 import { io } from "../index.js"; // ⚡ Socket.IO
 import { createLog } from "../utils/logger.js"; // 🔍 Logs
 
@@ -32,7 +37,7 @@ export const createService = async (req, res) => {
       service: newService,
     });
 
-    // 🧾 Log de creación de servicio
+    // 🧾 Log de creación
     await createLog({
       user: req.user.id,
       role: req.user.role,
@@ -41,7 +46,28 @@ export const createService = async (req, res) => {
       req,
     });
 
-    res.status(201).json({ message: "Servicio creado correctamente ✅", service: newService });
+    // 🔔 Crear notificación real para el administrador (control del sistema)
+    const admins = await User.find({ role: "admin" });
+    for (const admin of admins) {
+      const notification = await Notification.create({
+        user: admin._id,
+        title: "Nuevo servicio creado",
+        message: `El profesional ${req.user.name} publicó: "${newService.title}"`,
+        type: "service",
+      });
+
+      io.to(`room_user_${admin._id}`).emit("newNotification", {
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        read: notification.read,
+        createdAt: notification.createdAt,
+      });
+    }
+
+    res
+      .status(201)
+      .json({ message: "Servicio creado correctamente ✅", service: newService });
   } catch (error) {
     console.error("❌ Error al crear servicio:", error);
     res.status(500).json({ error: "Error en el servidor" });
@@ -82,7 +108,7 @@ export const updateService = async (req, res) => {
 
     const updated = await Service.findByIdAndUpdate(id, req.body, { new: true });
 
-    // 📢 Notificar actualización
+    // 📢 Notificar actualización general
     io.emit("serviceUpdated", {
       message: `🛠️ El servicio "${updated.title}" fue actualizado`,
       service: updated,
@@ -97,8 +123,28 @@ export const updateService = async (req, res) => {
       req,
     });
 
+    // 🔔 Notificación al administrador
+    const admins = await User.find({ role: "admin" });
+    for (const admin of admins) {
+      const notification = await Notification.create({
+        user: admin._id,
+        title: "Servicio actualizado",
+        message: `El profesional ${req.user.name} modificó: "${updated.title}"`,
+        type: "service",
+      });
+
+      io.to(`room_user_${admin._id}`).emit("newNotification", {
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        read: notification.read,
+        createdAt: notification.createdAt,
+      });
+    }
+
     res.json({ message: "Servicio actualizado correctamente", service: updated });
   } catch (error) {
+    console.error("❌ Error al actualizar servicio:", error);
     res.status(500).json({ error: "Error al actualizar el servicio" });
   }
 };
@@ -132,8 +178,28 @@ export const deleteService = async (req, res) => {
       req,
     });
 
+    // 🔔 Notificación al administrador
+    const admins = await User.find({ role: "admin" });
+    for (const admin of admins) {
+      const notification = await Notification.create({
+        user: admin._id,
+        title: "Servicio eliminado",
+        message: `${req.user.name} eliminó el servicio: "${service.title}"`,
+        type: "service",
+      });
+
+      io.to(`room_user_${admin._id}`).emit("newNotification", {
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        read: notification.read,
+        createdAt: notification.createdAt,
+      });
+    }
+
     res.json({ message: "Servicio eliminado correctamente 🗑️" });
   } catch (error) {
+    console.error("❌ Error al eliminar servicio:", error);
     res.status(500).json({ error: "Error al eliminar el servicio" });
   }
 };
@@ -152,7 +218,7 @@ export const updateServiceStatus = async (req, res) => {
     const service = await Service.findById(id);
     if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
 
-    // Validaciones de permisos
+    // 🧠 Validaciones de permisos
     if (req.user.role === "profesional") {
       if (service.professional.toString() !== req.user.id && !service.assignedTo) {
         if (newStatus === "en_proceso") {
@@ -166,15 +232,31 @@ export const updateServiceStatus = async (req, res) => {
       }
     }
 
-    // Actualizar estado
+    // 📦 Actualizar estado
     service.status = newStatus;
     await service.save();
 
-    // 📢 Notificación en tiempo real
+    // 📢 Notificar cambio de estado
     io.emit("statusUpdated", {
       message: `📦 El servicio "${service.title}" cambió a ${newStatus}`,
       serviceId: service._id,
       newStatus,
+    });
+
+    // 🔔 Crear notificación para el cliente
+    const notification = await Notification.create({
+      user: service.client,
+      title: "Estado de tu servicio actualizado",
+      message: `El servicio "${service.title}" ahora está en estado: ${newStatus}`,
+      type: "service",
+    });
+
+    io.to(`room_user_${service.client}`).emit("newNotification", {
+      id: notification._id,
+      title: notification.title,
+      message: notification.message,
+      read: notification.read,
+      createdAt: notification.createdAt,
     });
 
     // 🎯 Si se completó, actualizar progreso (gamificación)

@@ -25,14 +25,12 @@ const app = express();
 // 🛡️ Seguridad avanzada (Punto 31)
 // ==============================
 
-// ✅ Lista blanca de dominios permitidos
 const allowedOrigins = [
-  "http://localhost:5173", // frontend local (React/Vite)
-  "https://servigo.app", // dominio producción
-  "https://www.servigo.app", // con www
+  "http://localhost:5173",
+  "https://servigo.app",
+  "https://www.servigo.app",
 ];
 
-// 🌐 Configuración segura de CORS
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -45,7 +43,6 @@ const corsOptions = {
   credentials: true,
 };
 
-// 🧱 Configuración avanzada de Helmet
 const helmetConfig = helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
@@ -64,10 +61,8 @@ const helmetConfig = helmet({
   frameguard: { action: "deny" },
 });
 
-// Importamos limitadores
 import { limiter, speedLimiter } from "./middlewares/rateLimit.middleware.js";
 
-// 🧩 Aplicamos seguridad global
 app.use(helmetConfig);
 app.use(cors(corsOptions));
 app.use(limiter);
@@ -76,10 +71,7 @@ app.use(speedLimiter);
 // ==============================
 // 📊 Métricas en tiempo real
 // ==============================
-import {
-  recordRequest,
-  updateActiveSockets,
-} from "./services/metrics.service.js";
+import { recordRequest, updateActiveSockets } from "./services/metrics.service.js";
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -96,11 +88,9 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(morgan("dev"));
 
-// ✅ Sanitización (XSS + Mongo Injection)
 import { sanitizeMiddleware } from "./middlewares/sanitize.middleware.js";
 app.use(sanitizeMiddleware);
 
-// ✅ Antifraude
 import { antifraudMiddleware } from "./middlewares/antifraud.middleware.js";
 app.use(antifraudMiddleware);
 
@@ -123,7 +113,7 @@ import messageRoutes from "./routes/message.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import aiLogRoutes from "./routes/aiLog.routes.js";
-import aiSecurityRoutes from "./routes/aiSecurity.routes.js"; // 🔐 Seguridad IA
+import aiSecurityRoutes from "./routes/aiSecurity.routes.js";
 import metricsRoutes from "./routes/metrics.routes.js";
 
 // ==============================
@@ -160,7 +150,6 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
     logger.info("✅ Conexión a MongoDB establecida");
-
     if (process.env.NODE_ENV !== "test") {
       const { startSchedulers } = await import("./utils/scheduler.js");
       if (typeof startSchedulers === "function") startSchedulers();
@@ -177,20 +166,25 @@ const io = new Server(server, {
   cors: { origin: allowedOrigins, credentials: true },
 });
 
-// 📦 Modelos
 import Message from "./models/Message.js";
 import Notification from "./models/Notification.js";
 
+// ==============================
 // 🔔 Gestión de eventos Socket.IO
+// ==============================
+const onlineUsers = new Map(); // { userId: socketId }
+
 io.on("connection", (socket) => {
   logger.info(`🟢 Usuario conectado: ${socket.id}`);
   updateActiveSockets(io.engine.clientsCount);
 
+  // 🏠 Unirse a salas dinámicas
   socket.on("joinRoom", (room) => {
     socket.join(room);
     logger.debug(`📩 Usuario unido a sala: ${room}`);
   });
 
+  // 💬 Enviar mensajes
   socket.on("sendMessage", async (data) => {
     try {
       const { serviceId, sender, receiver, content } = data;
@@ -202,17 +196,39 @@ io.on("connection", (socket) => {
     }
   });
 
+  // 🔔 Notificaciones leídas
   socket.on("markNotificationsRead", async (userId) => {
     await Notification.updateMany({ user: userId, read: false }, { read: true });
     logger.info(`✅ Notificaciones marcadas como leídas para user ${userId}`);
   });
 
+  // 📍 Actualización de ubicación
   socket.on("updateLocation", (data) => {
     io.emit("professionalMoved", data);
     logger.debug("📍 Ubicación de profesional actualizada");
   });
 
+  // ==============================
+  // 🟢 Sistema de presencia y escritura
+  // ==============================
+  socket.on("userOnline", (userId) => {
+    onlineUsers.set(userId, socket.id);
+    io.emit("updateOnlineUsers", Array.from(onlineUsers.keys()));
+  });
+
+  socket.on("userTyping", ({ room, user }) => {
+    socket.to(room).emit("displayTyping", { user });
+  });
+
+  // 🚪 Desconexión
   socket.on("disconnect", () => {
+    for (const [userId, id] of onlineUsers.entries()) {
+      if (id === socket.id) {
+        onlineUsers.delete(userId);
+        break;
+      }
+    }
+    io.emit("updateOnlineUsers", Array.from(onlineUsers.keys()));
     updateActiveSockets(io.engine.clientsCount);
     logger.info(`🔴 Usuario desconectado: ${socket.id}`);
   });
@@ -242,5 +258,14 @@ if (process.env.NODE_ENV !== "test") {
   });
 }
 
-// ✅ Exportamos el servidor para Jest / Supertest
 export default server;
+// 📂 Servir archivos estáticos
+import path from "path";
+app.use("/uploads", express.static(path.resolve("uploads")));
+
+import uploadRoutes from "./routes/upload.routes.js";
+app.use("/api/upload", uploadRoutes);
+
+import chatRoutes from "./routes/chat.routes.js";
+app.use("/api/chats", chatRoutes);
+

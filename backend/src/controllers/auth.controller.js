@@ -17,7 +17,7 @@ const generateToken = (user) => {
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
-
+    console.log("🧩 BODY RECIBIDO:", req.body);
     // ✅ Validaciones básicas
     if (!name || !email || !password) {
       return res.status(400).json({ error: "Todos los campos son obligatorios" });

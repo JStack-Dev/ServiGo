@@ -1,0 +1,25 @@
+/* === Tailwind v4 core imports === */
+@import "tailwindcss/preflight";
+@import "tailwindcss/theme";
+@import "tailwindcss/utilities";
+
+/* === Global styles === */
+:root {
+  --color-primary: #1d4ed8;
+  --color-secondary: #facc15;
+  --color-bg-light: #f8f9fa;
+  --color-bg-dark: #1f2937;
+  --font-sans: "Poppins", system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-light);
+  color: #1f2937;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background-color: var(--color-bg-dark);
+  color: #f8f9fa;
+}

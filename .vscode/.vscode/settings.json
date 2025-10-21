@@ -1,0 +1,13 @@
+{
+  "css.validate": false,
+  "scss.validate": false,
+  "less.validate": false,
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["className=\"([^\"]*)\"", "['`]([^'`]*)['`]"]
+  ],
+  "css.lint.unknownAtRules": "ignore",
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+}
