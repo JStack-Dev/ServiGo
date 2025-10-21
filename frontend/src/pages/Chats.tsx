@@ -18,13 +18,13 @@ export default function Chats() {
   const { token, user } = useAuth();
   const [chats, setChats] = useState<ServiceChat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [_socket, setSocket] = useState<Socket | null>(null);
 
   // 🧩 Cargar servicios (chats base)
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const res = await axios.get(
+        const res = await axios.get<ServiceChat[]>(
           `${import.meta.env.VITE_API_URL}/services`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -42,14 +42,15 @@ export default function Chats() {
   useEffect(() => {
     if (!user || !token) return;
 
-    const newSocket = io(import.meta.env.VITE_API_URL || "http://localhost:8080", {
+    // ✅ Definimos el socket con tipo explícito
+    const newSocket: Socket = io(import.meta.env.VITE_API_URL || "http://localhost:8080", {
       auth: { token },
     });
 
     newSocket.emit("userOnline", user.id);
 
-    // 📨 Escuchar nuevos mensajes
-    newSocket.on("newMessage", (msg) => {
+    // 📨 Escuchar nuevos mensajes en tiempo real
+    newSocket.on("newMessage", (msg: { serviceId: string; content: string }) => {
       setChats((prevChats) =>
         prevChats.map((chat) =>
           chat._id === msg.serviceId
@@ -60,12 +61,20 @@ export default function Chats() {
     });
 
     setSocket(newSocket);
-    return () => newSocket.disconnect();
+
+    // ✅ Cleanup correcto: solo desconectamos, no devolvemos el socket
+    return () => {
+      newSocket.disconnect();
+    };
   }, [user, token]);
 
   // 🔁 Estado de carga
   if (loading)
-    return <p className="text-center mt-6 text-gray-500 dark:text-gray-400">Cargando chats...</p>;
+    return (
+      <p className="text-center mt-6 text-gray-500 dark:text-gray-400">
+        Cargando chats...
+      </p>
+    );
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -86,7 +95,9 @@ export default function Chats() {
                 className="flex justify-between items-center p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-xl"
               >
                 <div className="flex flex-col">
-                  <h4 className="font-semibold text-lg dark:text-gray-100">{chat.title}</h4>
+                  <h4 className="font-semibold text-lg dark:text-gray-100">
+                    {chat.title}
+                  </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {chat.client?.name} ↔ {chat.professional?.name}
                   </p>

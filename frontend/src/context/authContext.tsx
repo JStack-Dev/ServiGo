@@ -8,7 +8,7 @@ import {
 } from "react";
 import { loginUser, registerUser } from "@/services/auth.service";
 
-// 🧠 Tipos de usuario y contexto
+// 🧠 Tipos
 export interface User {
   id: string;
   name: string;
@@ -18,6 +18,7 @@ export interface User {
 
 export interface AuthContextProps {
   user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>; // ✅ colocado arriba para mayor legibilidad
   token: string | null;
   loading: boolean;
   error: string | null;
@@ -26,37 +27,38 @@ export interface AuthContextProps {
   logout: () => void;
 }
 
-// 🟢 Crear el contexto global
+// 🟢 Crear contexto
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-// 🧩 Provider principal de autenticación
+// 🧩 Provider principal
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(
     localStorage.getItem("token")
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔁 Cargar usuario guardado
+  // 🔁 Cargar usuario almacenado
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem("user"); // Limpieza por si JSON falla
+      }
     }
   }, [token]);
 
-  // 💾 Guardar o eliminar token según sesión
+  // 💾 Sincronizar token con localStorage
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("token");
-    }
+    if (token) localStorage.setItem("token", token);
+    else localStorage.removeItem("token");
   }, [token]);
 
   // 🔐 Iniciar sesión
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -65,15 +67,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.user);
       localStorage.setItem("user", JSON.stringify(res.user));
     } catch (err) {
+      console.error("❌ Error al iniciar sesión:", err);
       setError("Credenciales incorrectas");
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   // 🧾 Registrar usuario
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string
+  ): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -82,38 +88,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.user);
       localStorage.setItem("user", JSON.stringify(res.user));
     } catch (err) {
+      console.error("❌ Error al registrar usuario:", err);
       setError("Error al registrarse");
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   // 🚪 Cerrar sesión
-  const logout = () => {
+  const logout = (): void => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
   };
 
+  // ✅ Proveedor global del contexto
   return (
     <AuthContext.Provider
-      value={{ user, token, loading, error, login, register, logout }}
+      value={{ user, setUser, token, loading, error, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
-// 🪝 Hook personalizado
+// 🪝 Hook personalizado para acceder al contexto
 export const useAuth = (): AuthContextProps => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (!context)
     throw new Error("useAuth debe usarse dentro de un AuthProvider");
-  }
   return context;
 };
 
-// ✅ Export por defecto (opcional, para compatibilidad)
+// ✅ Export por defecto opcional
 export default AuthContext;

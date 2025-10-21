@@ -1,20 +1,16 @@
+import { ReactElement } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/authContext";
 
-/**
- * 🧱 Componente de Ruta Protegida
- * - Verifica si el usuario está autenticado.
- * - Si no hay token → redirige automáticamente al login.
- * - Si hay token → renderiza las rutas hijas (Outlet).
- */
-export default function PrivateRoute(): JSX.Element {
-  const { user, token } = useAuth();
+// ✅ Componente de ruta privada
+export default function PrivateRoute(): ReactElement {
+  const { token } = useAuth();
 
-  // ⛔ Si no hay usuario ni token, redirigir a login
-  if (!token || !user) {
+  // Si no hay token → redirige al login
+  if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ Si hay sesión activa, mostrar la ruta protegida
+  // Si hay token → renderiza el contenido protegido
   return <Outlet />;
 }

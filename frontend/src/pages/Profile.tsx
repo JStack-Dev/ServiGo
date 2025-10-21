@@ -1,24 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent, FormEvent } from "react";
 import { getUserProfile, updateUserProfile } from "@/services/user.service";
 import { useAuth } from "@/context/authContext";
 
+// ✅ Tipado del usuario
+interface User {
+  name?: string;
+  email?: string;
+  role?: string;
+  level?: string;
+  password?: string;
+}
+
 export default function Profile() {
-  const { user, setUser, token } = useAuth() as any;
-  const [formData, setFormData] = useState(user || {});
+  const { user, setUser, token } = useAuth();
+  const [formData, setFormData] = useState<User>(user || {});
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState("");
 
+  // ✅ Cargar perfil solo cuando haya token o el usuario cambie
   useEffect(() => {
     if (!user && token) {
-      getUserProfile().then((data) => setFormData(data.user));
+      getUserProfile()
+        .then((data) => setFormData(data.user))
+        .catch((_error) => console.error("Error al obtener el perfil"));
     }
-  }, []);
+  }, [user, token]); // 🧩 Dependencias correctas
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // ✅ Tipado correcto del evento
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ✅ Tipado correcto del submit
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
       const res = await updateUserProfile(formData);
@@ -26,7 +41,7 @@ export default function Profile() {
       localStorage.setItem("user", JSON.stringify(res.user));
       setMessage("Perfil actualizado correctamente ✅");
       setEditing(false);
-    } catch (error) {
+    } catch (_error) {
       setMessage("Error al actualizar el perfil ❌");
     }
   };
@@ -42,11 +57,20 @@ export default function Profile() {
       {!editing ? (
         <>
           <div className="space-y-2">
-            <p><strong>Nombre:</strong> {formData.name}</p>
-            <p><strong>Email:</strong> {formData.email}</p>
-            <p><strong>Rol:</strong> {formData.role}</p>
-            <p><strong>Nivel:</strong> {formData.level}</p>
+            <p>
+              <strong>Nombre:</strong> {formData.name || "—"}
+            </p>
+            <p>
+              <strong>Email:</strong> {formData.email || "—"}
+            </p>
+            <p>
+              <strong>Rol:</strong> {formData.role || "—"}
+            </p>
+            <p>
+              <strong>Nivel:</strong> {formData.level || "—"}
+            </p>
           </div>
+
           <button
             onClick={() => setEditing(true)}
             className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"

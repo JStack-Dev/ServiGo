@@ -28,6 +28,7 @@ interface NotificationContextProps {
   markAllAsRead: () => Promise<void>;
 }
 
+// 🌐 Crear el contexto
 const NotificationContext = createContext<NotificationContextProps | undefined>(
   undefined
 );
@@ -35,7 +36,6 @@ const NotificationContext = createContext<NotificationContextProps | undefined>(
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user, token } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [socket, setSocket] = useState<Socket | null>(null);
 
   // ===============================
   // 📦 Cargar notificaciones desde backend
@@ -43,35 +43,41 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!token) return;
 
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setNotifications(res.data))
-      .catch((err) =>
-        console.error("❌ Error al obtener notificaciones:", err)
-      );
+    const fetchNotifications = async () => {
+      try {
+        const res = await axios.get<Notification[]>(
+          `${import.meta.env.VITE_API_URL}/notifications`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setNotifications(res.data);
+      } catch (err) {
+        console.error("❌ Error al obtener notificaciones:", err);
+      }
+    };
+
+    fetchNotifications();
   }, [token]);
 
   // ===============================
-  // 🔌 Conexión Socket.IO real
+  // 🔌 Conexión Socket.IO (sin estado)
   // ===============================
   useEffect(() => {
     if (!user || !token) return;
 
-    const newSocket = io(import.meta.env.VITE_API_URL || "http://localhost:4000", {
+    const socket: Socket = io(import.meta.env.VITE_API_URL || "http://localhost:4000", {
       auth: { token },
     });
 
-    newSocket.emit("joinRoom", `room_user_${user.id}`);
+    socket.emit("joinRoom", `room_user_${user.id}`);
 
-    newSocket.on("newNotification", (data: Notification) => {
+    socket.on("newNotification", (data: Notification) => {
       setNotifications((prev) => [data, ...prev]);
       toast.success(`${data.title}: ${data.message}`);
     });
 
-    setSocket(newSocket);
-    return () => newSocket.disconnect();
+    return () => {
+      socket.disconnect();
+    };
   }, [user, token]);
 
   // ===============================
@@ -122,13 +128,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // ===============================
   // 📩 Marcar una notificación como leída
   // ===============================
-  const markAsRead = async (id: string) => {
+  const markAsRead = async (id: string): Promise<void> => {
     try {
       await axios.patch(
         `${import.meta.env.VITE_API_URL}/notifications/${id}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setNotifications((prev) =>
         prev.map((n) =>
           n._id === id || n.id === id ? { ...n, read: true } : n
@@ -142,11 +149,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // ===============================
   // 🔘 Marcar todas como leídas
   // ===============================
-  const markAllAsRead = async () => {
+  const markAllAsRead = async (): Promise<void> => {
     const unreadIds = notifications
       .filter((n) => !n.read)
-      .map((n) => n._id || n.id);
-    for (const id of unreadIds) await markAsRead(id);
+      .map((n) => n._id || n.id)
+      .filter(Boolean) as string[];
+
+    for (const id of unreadIds) {
+      await markAsRead(id);
+    }
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -160,11 +171,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// ===============================
+// 🧩 Hook personalizado
+// ===============================
 export const useNotifications = (): NotificationContextProps => {
   const context = useContext(NotificationContext);
-  if (!context)
-    throw new Error(
-      "useNotifications debe usarse dentro de un NotificationProvider"
-    );
+  if (!context) {
+    throw new Error("useNotifications debe usarse dentro de un NotificationProvider");
+  }
   return context;
 };

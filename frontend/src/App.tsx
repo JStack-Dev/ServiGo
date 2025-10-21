@@ -1,3 +1,4 @@
+// src/App.tsx
 import { Routes, Route } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import { Suspense, lazy } from "react";
@@ -9,7 +10,7 @@ const Contacto = lazy(() => import("./pages/Contacto"));
 const Notificaciones = lazy(() => import("./pages/Notificaciones"));
 const Chats = lazy(() => import("./pages/Chats"));
 const Chat = lazy(() => import("./pages/Chat"));
-const Dashboard = lazy(() => import("./pages/Dashboard")); // si lo tienes
+const Dashboard = lazy(() => import("./pages/dashboard"));
 
 function App() {
   return (

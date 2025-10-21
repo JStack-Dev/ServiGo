@@ -27,9 +27,9 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://servigo.app",
-  "https://www.servigo.app",
+  "https://servigo.vercel.app"
 ];
+
 
 const corsOptions = {
   origin: function (origin, callback) {
