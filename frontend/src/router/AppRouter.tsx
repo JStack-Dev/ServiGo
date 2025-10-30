@@ -1,5 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/context/authContext";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 // 🧱 Layouts
 import Navbar from "@/components/layout/Navbar";
@@ -20,32 +19,78 @@ import PrivateRoute from "./PrivateRoute";
 
 const AppRouter = () => {
   return (
-    <Router>
-      <AuthProvider>
-        <div className="min-h-screen flex flex-col bg-neutral-light dark:bg-neutral-dark text-neutral-dark dark:text-neutral-light transition-colors duration-300">
-          <Navbar />
-          <main className="flex-1 container mx-auto p-6">
-            <Routes>
-              {/* 🌍 Rutas públicas */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/contacto" element={<Contacto />} />
+    <div className="min-h-screen flex flex-col text-neutral-dark dark:text-neutral-light transition-colors duration-300">
+      <Routes>
+        {/* 🏠 Página Home con fondo propio (sin Navbar ni Footer) */}
+        <Route
+          path="/"
+          element={
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-cyan-400 to-green-300 text-white">
+              <Home />
+            </div>
+          }
+        />
 
-              {/* 🔒 Rutas protegidas */}
-              <Route element={<PrivateRoute />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/services" element={<Services />} />
-              </Route>
+        {/* 🌍 Rutas públicas con layout estándar */}
+        <Route
+          path="/login"
+          element={
+            <>
+              <Navbar />
+              <main className="flex-1 container mx-auto p-6">
+                <Login />
+              </main>
+              <Footer />
+            </>
+          }
+        />
 
-              {/* 🚫 Redirección global */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </AuthProvider>
-    </Router>
+        <Route
+          path="/register"
+          element={
+            <>
+              <Navbar />
+              <main className="flex-1 container mx-auto p-6">
+                <Register />
+              </main>
+              <Footer />
+            </>
+          }
+        />
+
+        <Route
+          path="/contacto"
+          element={
+            <>
+              <Navbar />
+              <main className="flex-1 container mx-auto p-6">
+                <Contacto />
+              </main>
+              <Footer />
+            </>
+          }
+        />
+
+        {/* 🔒 Rutas protegidas con layout */}
+        <Route
+          element={
+            <>
+              <Navbar />
+              <main className="flex-1 container mx-auto p-6">
+                <PrivateRoute />
+              </main>
+              <Footer />
+            </>
+          }
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/services" element={<Services />} />
+        </Route>
+
+        {/* 🚫 Redirección global */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 };
 

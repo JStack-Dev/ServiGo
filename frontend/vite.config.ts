@@ -1,27 +1,32 @@
 // ==============================
 // ⚙️ Vite Config – ServiGo Frontend
-// Optimización + Alias + Visualizer
+// Optimización + Alias + Visualizer + Tailwind 4.1
 // ==============================
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
+import tailwindcss from "@tailwindcss/postcss"; // ✅ NUEVO
+import autoprefixer from "autoprefixer";
 
 export default defineConfig({
   plugins: [
     react(),
     visualizer({
-      filename: "dist/stats.html", // 📊 genera un informe visual del bundle
-      open: false, // cámbialo a true si quieres que se abra automáticamente tras el build
+      filename: "dist/stats.html",
+      open: false,
       gzipSize: true,
       brotliSize: true,
     }),
   ],
 
-  // ==============================
-  // 🧭 Alias de rutas (importaciones limpias)
-  // ==============================
+  css: {
+    postcss: {
+      plugins: [tailwindcss(), autoprefixer()],
+    },
+  },
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -36,19 +41,10 @@ export default defineConfig({
     },
   },
 
-  // ==============================
-  // 🧩 Servidor de desarrollo
-  // ==============================
-  server: {
-    port: 5173,
-    open: true,
-  },
+  server: { port: 5173, open: true },
 
-  // ==============================
-  // ⚡ Configuración de build optimizada
-  // ==============================
   build: {
-    minify: "esbuild", // ⚙️ compilación rápida y ligera
+    minify: "esbuild",
     sourcemap: false,
     cssCodeSplit: true,
     assetsInlineLimit: 4096,
