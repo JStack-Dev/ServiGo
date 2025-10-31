@@ -1,8 +1,12 @@
+console.log("🧩 Renderizando Register.jsx");
+
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
+import { motion } from "framer-motion";
+import { Briefcase, User } from "lucide-react";
 
-const Register = () => {
+export default function Register() {
   const navigate = useNavigate();
   const { register, loading, error } = useAuth();
 
@@ -11,115 +15,160 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "", // 👈 se usará "cliente" o "profesional"
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    // 🔹 Validaciones básicas
     if (form.password !== form.confirmPassword) {
-      alert("Las contraseñas no coinciden");
+      alert("Las contraseñas no coinciden ❌");
+      return;
+    }
+
+    if (!form.role) {
+      alert("Selecciona si eres Particular o Profesional ⚠️");
       return;
     }
 
     try {
-      await register(form.name, form.email, form.password);
-      navigate("/dashboard");
+      // 🔹 Llamada al backend con rol correcto
+      await register(form.name, form.email, form.password, form.role);
+      navigate("/perfil"); // ✅ Redirige al perfil tras registro
     } catch (err) {
       console.error("Error en el registro:", err);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-neutral-light dark:bg-neutral-dark transition-colors">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white dark:bg-gray-800 shadow-card p-8 rounded-2xl w-full max-w-md"
+    <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-cyan-400 to-green-300">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="bg-white/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-[90%] max-w-md text-center"
       >
-        <h2 className="text-2xl font-semibold mb-6 text-center text-primary dark:text-secondary">
-          Crear cuenta
-        </h2>
+        {/* 🧩 Título */}
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">ServiGo</h1>
+        <p className="text-gray-700 mb-6">Crea tu cuenta para comenzar</p>
 
-        {error && (
-          <div className="text-red-500 text-center text-sm mb-4">{error}</div>
-        )}
-
-        <div className="mb-4">
-          <label className="block mb-1 font-medium text-gray-700 dark:text-gray-200">
-            Nombre completo
-          </label>
+        {/* 🧠 Formulario */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="text"
             name="name"
             value={form.name}
             onChange={handleChange}
-            className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Nombre completo"
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 
+                       focus:ring-2 focus:ring-blue-500 outline-none 
+                       text-black placeholder-gray-400"
             required
           />
-        </div>
-
-        <div className="mb-4">
-          <label className="block mb-1 font-medium text-gray-700 dark:text-gray-200">
-            Email
-          </label>
           <input
             type="email"
             name="email"
             value={form.email}
             onChange={handleChange}
-            className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Correo electrónico"
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 
+                       focus:ring-2 focus:ring-blue-500 outline-none 
+                       text-black placeholder-gray-400"
             required
           />
-        </div>
-
-        <div className="mb-4">
-          <label className="block mb-1 font-medium text-gray-700 dark:text-gray-200">
-            Contraseña
-          </label>
           <input
             type="password"
             name="password"
             value={form.password}
             onChange={handleChange}
-            className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Contraseña"
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 
+                       focus:ring-2 focus:ring-blue-500 outline-none 
+                       text-black placeholder-gray-400"
             required
           />
-        </div>
-
-        <div className="mb-6">
-          <label className="block mb-1 font-medium text-gray-700 dark:text-gray-200">
-            Confirmar contraseña
-          </label>
           <input
             type="password"
             name="confirmPassword"
             value={form.confirmPassword}
             onChange={handleChange}
-            className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Confirmar contraseña"
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 
+                       focus:ring-2 focus:ring-blue-500 outline-none 
+                       text-black placeholder-gray-400"
             required
           />
-        </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full py-2 rounded-lg text-white font-semibold transition ${
-            loading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-primary hover:bg-blue-700"
-          }`}
-        >
-          {loading ? "Creando cuenta..." : "Registrarse"}
-        </button>
-      </form>
+          {/* 🎯 Selector de rol */}
+          <div className="flex justify-around mt-4">
+            {/* 👤 Particular (envía cliente al backend) */}
+            <motion.button
+              type="button"
+              onClick={() => setForm({ ...form, role: "cliente" })}
+              whileTap={{ scale: 0.95 }}
+              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border ${
+                form.role === "cliente"
+                  ? "bg-blue-100 border-blue-600 text-blue-700"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <User size={28} />
+              <span className="text-sm font-medium">Particular</span>
+            </motion.button>
+
+            {/* 🧰 Profesional */}
+            <motion.button
+              type="button"
+              onClick={() => setForm({ ...form, role: "profesional" })}
+              whileTap={{ scale: 0.95 }}
+              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border ${
+                form.role === "profesional"
+                  ? "bg-green-100 border-green-600 text-green-700"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Briefcase size={28} />
+              <span className="text-sm font-medium">Profesional</span>
+            </motion.button>
+          </div>
+
+          {/* 🚨 Errores */}
+          {error && (
+            <p className="text-red-600 text-sm mt-2 text-center">{error}</p>
+          )}
+
+          {/* 🚀 Botón principal */}
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={loading}
+            className={`mt-6 w-full py-2 rounded-lg text-white font-semibold shadow-md transition-all ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {loading ? "Creando cuenta..." : "Registrarse"}
+          </motion.button>
+        </form>
+
+        {/* 🔁 Enlace inverso */}
+        <p className="text-sm text-gray-500 mt-6">
+          ¿Ya tienes cuenta?{" "}
+          <button
+            onClick={() => navigate("/")}
+            className="text-blue-600 font-semibold hover:underline"
+          >
+            Inicia sesión
+          </button>
+        </p>
+      </motion.div>
     </div>
   );
-};
-
-export default Register;
+}

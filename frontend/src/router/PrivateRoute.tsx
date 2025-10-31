@@ -6,9 +6,9 @@ import { useAuth } from "@/context/authContext";
 export default function PrivateRoute(): ReactElement {
   const { token } = useAuth();
 
-  // Si no hay token → redirige al login
+  // Si no hay token → redirige al inicio (Home)
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Si hay token → renderiza el contenido protegido

@@ -26,7 +26,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ error: "Correo no válido" });
     }
     if (!validatePassword(password)) {
-      return res.status(400).json({ error: "Contraseña inválida (mínimo 6 caracteres)" });
+      return res.status(400).json({ error:  "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número." });
     }
 
     // 📬 Comprobar duplicado

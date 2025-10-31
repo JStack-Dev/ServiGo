@@ -18,12 +18,17 @@ export interface User {
 
 export interface AuthContextProps {
   user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>; // ✅ colocado arriba para mayor legibilidad
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   token: string | null;
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    role: string
+  ) => Promise<void>;
   logout: () => void;
 }
 
@@ -46,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setUser(JSON.parse(savedUser));
       } catch {
-        localStorage.removeItem("user"); // Limpieza por si JSON falla
+        localStorage.removeItem("user");
       }
     }
   }, [token]);
@@ -65,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await loginUser(email, password);
       setToken(res.token);
       setUser(res.user);
+      localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
     } catch (err) {
       console.error("❌ Error al iniciar sesión:", err);
@@ -78,14 +84,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (
     name: string,
     email: string,
-    password: string
+    password: string,
+    role: string
   ): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
-      const res = await registerUser(name, email, password);
+      const res = await registerUser(name, email, password, role);
       setToken(res.token);
       setUser(res.user);
+      localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(res.user));
     } catch (err) {
       console.error("❌ Error al registrar usuario:", err);
@@ -121,5 +129,4 @@ export const useAuth = (): AuthContextProps => {
   return context;
 };
 
-// ✅ Export por defecto opcional
 export default AuthContext;
