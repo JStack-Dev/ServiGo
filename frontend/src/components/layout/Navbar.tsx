@@ -1,9 +1,13 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Hammer, AlertTriangle, UserPlus } from "lucide-react";
+import { ChevronDown, Hammer, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 
+/* ============================================================
+   🧭 Navbar — ServiGo
+   Categorías + Reportar incidencia
+============================================================ */
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState(false);
 
@@ -21,7 +25,7 @@ export default function Navbar() {
     <nav className="bg-white dark:bg-neutral-900 shadow-md py-3 px-6 flex justify-between items-center fixed top-0 left-0 w-full z-50">
       {/* 🔧 Izquierda: Menú de categorías + Reportar */}
       <div className="flex items-center gap-4">
-        {/* Botón Categorías */}
+        {/* 📂 Botón Categorías */}
         <div className="relative">
           <button
             onClick={() => setOpenMenu(!openMenu)}
@@ -36,7 +40,7 @@ export default function Navbar() {
             />
           </button>
 
-          {/* Submenú */}
+          {/* 📋 Submenú dinámico */}
           <AnimatePresence>
             {openMenu && (
               <motion.ul
@@ -62,25 +66,16 @@ export default function Navbar() {
           </AnimatePresence>
         </div>
 
-        {/* Botón Reportar incidencia */}
-        <Link
-          to="/reportar"
-          className="flex items-center gap-1 text-gray-800 dark:text-gray-100 font-medium hover:text-primary transition"
-        >
-          <AlertTriangle className="w-5 h-5" />
-          Reportar incidencia
-        </Link>
-      </div>
-
-      {/* 👤 Derecha: Registro */}
-      <div>
-        <Link
-          to="/register"
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full font-medium hover:bg-primary-dark transition"
-        >
-          <UserPlus className="w-5 h-5" />
-          Registrarse
-        </Link>
+        {/* ⚠️ Botón Reportar incidencia */}
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Link
+            to="/reportar-incidencia"
+            className="flex items-center gap-1 text-gray-800 dark:text-gray-100 font-medium hover:text-primary transition"
+          >
+            <AlertTriangle className="w-5 h-5" />
+            Reportar incidencia
+          </Link>
+        </motion.div>
       </div>
     </nav>
   );

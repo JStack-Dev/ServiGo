@@ -1,12 +1,54 @@
 // ==============================
-// 💼 Service Controller – ServiGo
+// 💼 Service Controller – ServiGo (Versión Final)
 // ==============================
 
 import Service from "../models/Service.js";
 import User from "../models/User.js";
-import Notification from "../models/Notification.js"; // ✅ Nuevo modelo
-import { io } from "../index.js"; // ⚡ Socket.IO
-import { createLog } from "../utils/logger.js"; // 🔍 Logs
+import Notification from "../models/Notification.js";
+import { io } from "../index.js";
+import { createLog } from "../utils/logger.js";
+
+// 🔵 Obtener servicios del cliente autenticado
+export const getServicesByClient = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status } = req.query; // ?status=pendiente|en_proceso|completado
+
+    const filter = { client: userId };
+    if (status) filter.status = status;
+
+    const services = await Service.find(filter)
+      .populate("professional", "name email phone profession averageRating")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(services);
+  } catch (error) {
+    console.error("❌ Error al obtener servicios del cliente:", error);
+    res.status(500).json({ error: "Error al obtener los servicios del cliente" });
+  }
+};
+
+// 👨‍🔧 Obtener servicios activos del profesional autenticado
+export const getActiveServicesByProfessional = async (req, res) => {
+  try {
+    const professionalId = req.user.id;
+    const { status } = req.query; // ?status=en_proceso|pendiente|completado
+
+    const filter = { professional: professionalId };
+    if (status) filter.status = status;
+
+    const services = await Service.find(filter)
+      .populate("client", "name email phone")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(services);
+  } catch (error) {
+    console.error("❌ Error al obtener servicios del profesional:", error);
+    res
+      .status(500)
+      .json({ error: "Error al obtener los servicios activos del profesional" });
+  }
+};
 
 // 🟢 Crear un nuevo servicio (solo profesionales)
 export const createService = async (req, res) => {
@@ -14,7 +56,9 @@ export const createService = async (req, res) => {
     const { title, description, category, price, urgency, scheduledDate } = req.body;
 
     if (!title || !description || !category) {
-      return res.status(400).json({ error: "Título, descripción y categoría son obligatorios" });
+      return res
+        .status(400)
+        .json({ error: "Título, descripción y categoría son obligatorios" });
     }
 
     const newService = new Service({
@@ -29,7 +73,7 @@ export const createService = async (req, res) => {
 
     await newService.save();
 
-    // 📢 Notificar a los usuarios conectados
+    // 🔔 Emitir evento Socket.IO
     io.emit(urgency ? "newUrgentService" : "newService", {
       message: urgency
         ? "🚨 Nuevo servicio urgente disponible"
@@ -37,7 +81,7 @@ export const createService = async (req, res) => {
       service: newService,
     });
 
-    // 🧾 Log de creación
+    // 📜 Registrar log
     await createLog({
       user: req.user.id,
       role: req.user.role,
@@ -46,7 +90,7 @@ export const createService = async (req, res) => {
       req,
     });
 
-    // 🔔 Crear notificación real para el administrador (control del sistema)
+    // 🔔 Notificar a los administradores
     const admins = await User.find({ role: "admin" });
     for (const admin of admins) {
       const notification = await Notification.create({
@@ -65,111 +109,98 @@ export const createService = async (req, res) => {
       });
     }
 
-    res
-      .status(201)
-      .json({ message: "Servicio creado correctamente ✅", service: newService });
+    res.status(201).json({
+      message: "Servicio creado correctamente ✅",
+      service: newService,
+    });
   } catch (error) {
     console.error("❌ Error al crear servicio:", error);
     res.status(500).json({ error: "Error en el servidor" });
   }
 };
 
-// 🟡 Obtener todos los servicios (clientes o admin)
-export const getAllServices = async (req, res) => {
+// ⭐ Valorar al profesional
+export const rateProfessional = async (req, res) => {
   try {
-    const services = await Service.find().populate("professional", "name email role");
-    res.json(services);
+    const { id } = req.params;
+    const { rating } = req.body;
+
+    if (!rating || rating < 1 || rating > 5)
+      return res.status(400).json({ error: "La valoración debe ser entre 1 y 5" });
+
+    const service = await Service.findById(id).populate("professional");
+    if (!service)
+      return res.status(404).json({ error: "Servicio no encontrado" });
+
+    if (service.client.toString() !== req.user.id)
+      return res.status(403).json({ error: "No puedes valorar este servicio" });
+
+    if (service.status !== "completado")
+      return res.status(400).json({ error: "Solo puedes valorar servicios completados" });
+
+    // Actualizamos promedio del profesional
+    const pro = service.professional;
+    const totalValoraciones = pro.completedServices || 1;
+    pro.averageRating =
+      ((pro.averageRating || 0) * (totalValoraciones - 1) + rating) /
+      totalValoraciones;
+    await pro.save();
+
+    res.json({ message: "Valoración enviada correctamente ✅" });
   } catch (error) {
-    res.status(500).json({ error: "Error al obtener los servicios" });
+    console.error("❌ Error al valorar profesional:", error);
+    res.status(500).json({ error: "Error al enviar la valoración" });
   }
 };
 
-// 🟣 Obtener servicios por profesional
-export const getServicesByProfessional = async (req, res) => {
-  try {
-    const services = await Service.find({ professional: req.user.id });
-    res.json(services);
-  } catch (error) {
-    res.status(500).json({ error: "Error al obtener servicios del profesional" });
-  }
-};
-
-// 🔵 Actualizar un servicio
-export const updateService = async (req, res) => {
+// 🚫 Cancelar servicio (cliente)
+export const cancelService = async (req, res) => {
   try {
     const { id } = req.params;
     const service = await Service.findById(id);
 
-    if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
+    if (!service)
+      return res.status(404).json({ error: "Servicio no encontrado" });
 
-    if (service.professional.toString() !== req.user.id && req.user.role !== "admin") {
-      return res.status(403).json({ error: "No tienes permiso para editar este servicio" });
-    }
+    if (service.client.toString() !== req.user.id)
+      return res.status(403).json({ error: "No puedes cancelar este servicio" });
 
-    const updated = await Service.findByIdAndUpdate(id, req.body, { new: true });
+    if (service.status !== "pendiente")
+      return res
+        .status(400)
+        .json({ error: "Solo puedes cancelar servicios pendientes" });
 
-    // 📢 Notificar actualización general
-    io.emit("serviceUpdated", {
-      message: `🛠️ El servicio "${updated.title}" fue actualizado`,
-      service: updated,
-    });
+    service.status = "cancelado";
+    await service.save();
 
-    // 🧾 Log de actualización
-    await createLog({
-      user: req.user.id,
-      role: req.user.role,
-      action: "ACTUALIZAR_SERVICIO",
-      description: `Servicio actualizado: ${updated.title}`,
-      req,
-    });
-
-    // 🔔 Notificación al administrador
-    const admins = await User.find({ role: "admin" });
-    for (const admin of admins) {
-      const notification = await Notification.create({
-        user: admin._id,
-        title: "Servicio actualizado",
-        message: `El profesional ${req.user.name} modificó: "${updated.title}"`,
-        type: "service",
-      });
-
-      io.to(`room_user_${admin._id}`).emit("newNotification", {
-        id: notification._id,
-        title: notification.title,
-        message: notification.message,
-        read: notification.read,
-        createdAt: notification.createdAt,
-      });
-    }
-
-    res.json({ message: "Servicio actualizado correctamente", service: updated });
+    res.json({ message: "Servicio cancelado correctamente ❌", service });
   } catch (error) {
-    console.error("❌ Error al actualizar servicio:", error);
-    res.status(500).json({ error: "Error al actualizar el servicio" });
+    console.error("❌ Error al cancelar servicio:", error);
+    res.status(500).json({ error: "Error al cancelar el servicio" });
   }
 };
 
-// 🔴 Eliminar un servicio
+// 🗑️ Eliminar servicio (solo admin o profesional creador)
 export const deleteService = async (req, res) => {
   try {
     const { id } = req.params;
     const service = await Service.findById(id);
 
-    if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
+    if (!service)
+      return res.status(404).json({ error: "Servicio no encontrado" });
 
-    if (service.professional.toString() !== req.user.id && req.user.role !== "admin") {
-      return res.status(403).json({ error: "No tienes permiso para eliminar este servicio" });
+    // Solo admin o profesional creador
+    if (
+      req.user.role !== "admin" &&
+      service.professional.toString() !== req.user.id
+    ) {
+      return res
+        .status(403)
+        .json({ error: "No autorizado para eliminar este servicio" });
     }
 
-    await service.deleteOne();
+    await Service.findByIdAndDelete(id);
 
-    // 📢 Notificar eliminación
-    io.emit("serviceDeleted", {
-      message: `🗑️ El servicio "${service.title}" ha sido eliminado`,
-      serviceId: service._id,
-    });
-
-    // 🧾 Log de eliminación
     await createLog({
       user: req.user.id,
       role: req.user.role,
@@ -178,121 +209,9 @@ export const deleteService = async (req, res) => {
       req,
     });
 
-    // 🔔 Notificación al administrador
-    const admins = await User.find({ role: "admin" });
-    for (const admin of admins) {
-      const notification = await Notification.create({
-        user: admin._id,
-        title: "Servicio eliminado",
-        message: `${req.user.name} eliminó el servicio: "${service.title}"`,
-        type: "service",
-      });
-
-      io.to(`room_user_${admin._id}`).emit("newNotification", {
-        id: notification._id,
-        title: notification.title,
-        message: notification.message,
-        read: notification.read,
-        createdAt: notification.createdAt,
-      });
-    }
-
     res.json({ message: "Servicio eliminado correctamente 🗑️" });
   } catch (error) {
     console.error("❌ Error al eliminar servicio:", error);
     res.status(500).json({ error: "Error al eliminar el servicio" });
-  }
-};
-
-// 🟢 Cambiar el estado de un servicio (aceptar, completar, cancelar)
-export const updateServiceStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { newStatus } = req.body;
-
-    const validStatuses = ["pendiente", "en_proceso", "completado", "cancelado"];
-    if (!validStatuses.includes(newStatus)) {
-      return res.status(400).json({ error: "Estado no válido" });
-    }
-
-    const service = await Service.findById(id);
-    if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
-
-    // 🧠 Validaciones de permisos
-    if (req.user.role === "profesional") {
-      if (service.professional.toString() !== req.user.id && !service.assignedTo) {
-        if (newStatus === "en_proceso") {
-          service.assignedTo = req.user.id;
-          service.acceptedAt = new Date();
-        } else {
-          return res.status(403).json({ error: "No puedes modificar este servicio aún" });
-        }
-      } else if (service.assignedTo?.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Este servicio pertenece a otro profesional" });
-      }
-    }
-
-    // 📦 Actualizar estado
-    service.status = newStatus;
-    await service.save();
-
-    // 📢 Notificar cambio de estado
-    io.emit("statusUpdated", {
-      message: `📦 El servicio "${service.title}" cambió a ${newStatus}`,
-      serviceId: service._id,
-      newStatus,
-    });
-
-    // 🔔 Crear notificación para el cliente
-    const notification = await Notification.create({
-      user: service.client,
-      title: "Estado de tu servicio actualizado",
-      message: `El servicio "${service.title}" ahora está en estado: ${newStatus}`,
-      type: "service",
-    });
-
-    io.to(`room_user_${service.client}`).emit("newNotification", {
-      id: notification._id,
-      title: notification.title,
-      message: notification.message,
-      read: notification.read,
-      createdAt: notification.createdAt,
-    });
-
-    // 🎯 Si se completó, actualizar progreso (gamificación)
-    if (newStatus === "completado") {
-      const pro = await User.findById(service.professional);
-      pro.completedServices = (pro.completedServices || 0) + 1;
-
-      if (pro.averageRating >= 4.8 && pro.completedServices > 50) pro.level = "Diamante";
-      else if (pro.averageRating >= 4.5 && pro.completedServices > 20) pro.level = "Oro";
-      else if (pro.averageRating >= 4.0 && pro.completedServices > 10) pro.level = "Plata";
-      else pro.level = "Bronce";
-
-      if (pro.averageRating >= 4.8 && !pro.badges.includes("Top Valorado")) {
-        pro.badges.push("Top Valorado");
-      }
-      if (pro.completedServices >= 20 && !pro.badges.includes("Constante")) {
-        pro.badges.push("Constante");
-      }
-
-      await pro.save();
-
-      await createLog({
-        user: req.user.id,
-        role: req.user.role,
-        action: "COMPLETAR_SERVICIO",
-        description: `Servicio completado: ${service.title}`,
-        req,
-      });
-    }
-
-    res.json({
-      message: `Estado actualizado correctamente a "${newStatus}" ✅`,
-      service,
-    });
-  } catch (error) {
-    console.error("❌ Error al actualizar estado:", error);
-    res.status(500).json({ error: "Error al actualizar el estado del servicio" });
   }
 };

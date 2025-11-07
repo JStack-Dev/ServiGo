@@ -1,3 +1,4 @@
+// frontend/eslint.config.js
 import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -8,12 +9,15 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx,js,jsx}"],
     ignores: ["dist", "node_modules", ".vite", "build"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        ...globals.node, // ✅ Añadido: reconoce console, process, __dirname, etc.
+      },
     },
     plugins: {
       "react-hooks": reactHooks,
@@ -21,10 +25,10 @@ export default tseslint.config(
     },
     rules: {
       /* ✅ Buenas prácticas generales */
-      "no-console": "off",
+      "no-console": "off", // Permitido en desarrollo
       "no-debugger": "warn",
 
-      /* 🧠 Variables y argumentos no usados */
+      /* 🧠 Variables no usadas */
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {

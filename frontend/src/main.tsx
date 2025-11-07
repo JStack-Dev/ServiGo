@@ -8,7 +8,9 @@ import "@styles/global.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/authContext";
 import { NotificationProvider } from "@/context/NotificationContext";
-import { Toaster } from "react-hot-toast";
+
+// 🛎️ Sistema de notificaciones global con Sonner
+import { Toaster } from "sonner";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -17,7 +19,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <AuthProvider>
           <NotificationProvider>
             <AppRouter />
-            <Toaster position="bottom-right" reverseOrder={false} />
+            {/* 🧠 Toaster global (notificaciones en tiempo real) */}
+            <Toaster
+              position="bottom-right"
+              richColors
+              toastOptions={{
+                duration: 3500,
+                className: "shadow-lg rounded-xl font-medium",
+              }}
+            />
           </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -1,8 +1,9 @@
 import User from "../models/User.js";
 import Service from "../models/Service.js";
 import Payment from "../models/Payment.js"; // si ya tienes Stripe integrado
+import { AdminService } from "./admin.service.js";
 
-// 👥 Obtener todos los usuarios
+//  Obtener todos los usuarios
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -12,7 +13,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// 🧹 Eliminar usuario
+//  Eliminar usuario
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -23,7 +24,7 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// 🧾 Obtener todos los servicios
+//  Obtener todos los servicios
 export const getAllServicesAdmin = async (req, res) => {
   try {
     const services = await Service.find()
@@ -35,7 +36,7 @@ export const getAllServicesAdmin = async (req, res) => {
   }
 };
 
-// 💳 Ver todos los pagos
+//  Ver todos los pagos
 export const getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find()
@@ -46,4 +47,14 @@ export const getAllPayments = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Error al obtener los pagos" });
   }
+};
+
+
+export const AdminController = {
+  // ...otras acciones (getUsers, getBookings, etc.)
+
+  async getLogs(req, res) {
+    const logs = await AdminService.getSystemLogs();
+    res.json(logs);
+  },
 };

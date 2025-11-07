@@ -1,43 +1,40 @@
 // ==============================
-// 🌍 ServiGo Backend (v1.0)
+// 🌍 ServiGo Backend (v1.4)
+// Real-time Sync + Bookings + Direct Chat + Notifications
 // ==============================
 
-// 📦 Librerías principales
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import helmet from "helmet";
+import path from "path";
 import { createServer } from "http";
-import { Server } from "socket.io";
+import logger, { attachLoggerSocket } from "./config/logger.js";
+import { initSocket } from "./config/socket.js";
 
-// 🧾 Logger profesional (Winston)
-import logger from "./utils/winstonLogger.js";
+// 📦 Modelos base
+import Message from "./models/Message.js";
+import Notification from "./models/Notification.js";
+import Booking from "./models/Booking.js";
+import ChatDirect from "./models/ChatDirect.js"; // ✅ nuevo modelo para chat directo
 
-// ⚙️ Variables de entorno
+// ⚙️ Configuración de entorno
 dotenv.config();
 
 // 🚀 Inicializamos Express
 const app = express();
 
 // ==============================
-// 🛡️ Seguridad avanzada (Punto 31)
+// 🛡️ Seguridad avanzada
 // ==============================
-
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://servigo.vercel.app"
-];
-
+const allowedOrigins = ["http://localhost:5173", "https://servigo.vercel.app"];
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("❌ Origen no permitido por CORS"));
-    }
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+    else callback(new Error("❌ Origen no permitido por CORS"));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
@@ -62,17 +59,37 @@ const helmetConfig = helmet({
 });
 
 import { limiter, speedLimiter } from "./middlewares/rateLimit.middleware.js";
+import { sanitizeMiddleware } from "./middlewares/sanitize.middleware.js";
+import { antifraudMiddleware } from "./middlewares/antifraud.middleware.js";
+import { recordRequest, updateActiveSockets } from "./services/metrics.service.js";
 
+// ==============================
+// 🧱 Middlewares globales
+// ==============================
 app.use(helmetConfig);
 app.use(cors(corsOptions));
 app.use(limiter);
 app.use(speedLimiter);
+app.use(express.json());
+app.use(morgan("dev"));
+app.use(sanitizeMiddleware);
+app.use(antifraudMiddleware);
 
-// ==============================
-// 📊 Métricas en tiempo real
-// ==============================
-import { recordRequest, updateActiveSockets } from "./services/metrics.service.js";
+// 📘 Logger de peticiones HTTP
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    logger.info(`${req.method} ${req.originalUrl}`, {
+      statusCode: res.statusCode,
+      responseTime: `${duration}ms`,
+      userAgent: req.headers["user-agent"],
+    });
+  });
+  next();
+});
 
+// 📊 Métricas
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -82,20 +99,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// ==============================
-// 🧩 Middlewares globales
-// ==============================
-app.use(express.json());
-app.use(morgan("dev"));
-
-import { sanitizeMiddleware } from "./middlewares/sanitize.middleware.js";
-app.use(sanitizeMiddleware);
-
-import { antifraudMiddleware } from "./middlewares/antifraud.middleware.js";
-app.use(antifraudMiddleware);
+// 📁 Archivos estáticos
+app.use("/uploads", express.static(path.resolve("uploads")));
 
 // ==============================
-// 🧩 Importamos rutas
+// 🔗 Rutas API
 // ==============================
 import authRoutes from "./routes/auth.routes.js";
 import testRoutes from "./routes/test.routes.js";
@@ -105,7 +113,6 @@ import reviewRoutes from "./routes/review.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import locationRoutes from "./routes/location.routes.js";
-import adminRoutes from "./routes/admin.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import reportRoutes from "./routes/report.routes.js";
 import logRoutes from "./routes/log.routes.js";
@@ -115,10 +122,13 @@ import aiRoutes from "./routes/ai.routes.js";
 import aiLogRoutes from "./routes/aiLog.routes.js";
 import aiSecurityRoutes from "./routes/aiSecurity.routes.js";
 import metricsRoutes from "./routes/metrics.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
+import bookingRoutes from "./routes/booking.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
+import chatDirectRoutes from "./routes/chatDirect.routes.js"; // ✅ nuevo import
 
-// ==============================
-// 🔗 Asignación de rutas base
-// ==============================
+// 🧩 Registrar rutas base
 app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/services", serviceRoutes);
@@ -137,14 +147,17 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/ai/logs", aiLogRoutes);
 app.use("/api/ai/security", aiSecurityRoutes);
 app.use("/api/metrics", metricsRoutes);
+app.use("/api/chats", chatRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/direct-chats", chatDirectRoutes);
 
-// 🌍 Endpoint rápido de test
 app.get("/api", (req, res) => {
   res.json({ mensaje: "Servidor ServiGo funcionando correctamente 🚀" });
 });
 
 // ==============================
-// 🧠 Conexión a MongoDB Atlas
+// 🧠 MongoDB Atlas
 // ==============================
 mongoose
   .connect(process.env.MONGO_URI)
@@ -153,80 +166,144 @@ mongoose
     if (process.env.NODE_ENV !== "test") {
       const { startSchedulers } = await import("./utils/scheduler.js");
       if (typeof startSchedulers === "function") startSchedulers();
-      else logger.warn("⚠️ startSchedulers no está definido en scheduler.js");
     }
   })
-  .catch((err) => logger.error(`❌ Error al conectar a MongoDB: ${err.message}`));
+  .catch((err) =>
+    logger.error(`❌ Error al conectar a MongoDB: ${err.message}`)
+  );
 
 // ==============================
-// ⚡ Configuración de Socket.IO
+// ⚡ Socket.IO — Configuración
 // ==============================
 const server = createServer(app);
-const io = new Server(server, {
-  cors: { origin: allowedOrigins, credentials: true },
-});
+const io = initSocket(server, allowedOrigins);
+attachLoggerSocket(io);
+export { io };
 
-import Message from "./models/Message.js";
-import Notification from "./models/Notification.js";
-
-// ==============================
-// 🔔 Gestión de eventos Socket.IO
-// ==============================
-const onlineUsers = new Map(); // { userId: socketId }
+const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
   logger.info(`🟢 Usuario conectado: ${socket.id}`);
   updateActiveSockets(io.engine.clientsCount);
 
-  // 🏠 Unirse a salas dinámicas
-  socket.on("joinRoom", (room) => {
-    socket.join(room);
-    logger.debug(`📩 Usuario unido a sala: ${room}`);
-  });
+  // ===========================================
+  // 💬 CHAT NORMAL (por servicio)
+  // ===========================================
+  socket.on("joinRoom", (room) => socket.join(room));
 
-  // 💬 Enviar mensajes
-  socket.on("sendMessage", async (data) => {
+  socket.on("sendMessage", async ({ serviceId, sender, receiver, content }) => {
     try {
-      const { serviceId, sender, receiver, content } = data;
       const message = await Message.create({ serviceId, sender, receiver, content });
       io.to(`room_service_${serviceId}`).emit("newMessage", message);
-      logger.info(`💬 Mensaje emitido en room_service_${serviceId}`);
     } catch (error) {
       logger.error(`❌ Error al enviar mensaje: ${error.message}`);
     }
   });
 
-  // 🔔 Notificaciones leídas
-  socket.on("markNotificationsRead", async (userId) => {
-    await Notification.updateMany({ user: userId, read: false }, { read: true });
-    logger.info(`✅ Notificaciones marcadas como leídas para user ${userId}`);
+  socket.on("markAsRead", async ({ serviceId, userId }) => {
+    try {
+      const updated = await Message.updateMany(
+        { serviceId, receiver: userId, read: false },
+        { $set: { read: true } }
+      );
+      if (updated.modifiedCount > 0) {
+        io.to(`room_service_${serviceId}`).emit("messagesMarkedAsRead", {
+          serviceId,
+          userId,
+        });
+        logger.info(`📘 ${updated.modifiedCount} mensajes marcados como leídos`);
+      }
+    } catch (error) {
+      logger.error(`❌ Error al marcar mensajes como leídos: ${error.message}`);
+    }
   });
 
-  // 📍 Actualización de ubicación
-  socket.on("updateLocation", (data) => {
-    io.emit("professionalMoved", data);
-    logger.debug("📍 Ubicación de profesional actualizada");
+  // ===========================================
+  // 💬 CHAT DIRECTO (cliente ↔ profesional)
+  // ===========================================
+  socket.on("joinDirectChat", ({ chatId }) => {
+    socket.join(`direct_${chatId}`);
+    logger.info(`👥 Usuario unido a sala direct_${chatId}`);
   });
 
-  // ==============================
-  // 🟢 Sistema de presencia y escritura
-  // ==============================
+  socket.on("sendDirectMessage", async (msgData) => {
+    try {
+      const { chatId, text, sender } = msgData;
+      const chat = await ChatDirect.findById(chatId);
+
+      if (!chat) {
+        logger.warn(`⚠️ Chat no encontrado: ${chatId}`);
+        return;
+      }
+
+      const message = {
+        sender,
+        text,
+        createdAt: new Date(),
+      };
+
+      chat.messages.push(message);
+      await chat.save();
+
+      io.to(`direct_${chatId}`).emit("receiveDirectMessage", message);
+      logger.info(`💬 Nuevo mensaje directo en chat ${chatId}`);
+      } catch (error) {
+        logger.error(`❌ Error en sendDirectMessage: ${error.message}`);
+      }
+    });
+  
+      // 💭 Estado "escribiendo..."
+socket.on("typingDirect", ({ chatId, userId }) => {
+  socket.to(`direct_${chatId}`).emit("userTypingDirect", { userId });
+});
+
+socket.on("stopTypingDirect", ({ chatId, userId }) => {
+  socket.to(`direct_${chatId}`).emit("userStopTypingDirect", { userId });
+  });
+
+  // ===========================================
+  // 💭 Indicadores y notificaciones
+  // ===========================================
+  socket.on("typing", ({ serviceId, userId }) =>
+    socket.to(`room_service_${serviceId}`).emit("userTyping", { userId })
+  );
+
+  socket.on("stopTyping", ({ serviceId, userId }) =>
+    socket.to(`room_service_${serviceId}`).emit("userStopTyping", { userId })
+  );
+
   socket.on("userOnline", (userId) => {
     onlineUsers.set(userId, socket.id);
     io.emit("updateOnlineUsers", Array.from(onlineUsers.keys()));
   });
 
-  socket.on("userTyping", ({ room, user }) => {
-    socket.to(room).emit("displayTyping", { user });
+  socket.on("booking:created", ({ professionalId, bookingId }) => {
+    io.to(`room_user_${professionalId}`).emit("newNotification", {
+      title: "Nueva reserva",
+      message: `Tienes una nueva reserva #${bookingId} pendiente 🧾`,
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
   });
 
-  // 🚪 Desconexión
+  socket.on("booking:updated", ({ clientId, status }) => {
+    io.to(`room_user_${clientId}`).emit("newNotification", {
+      title: "Actualización de reserva",
+      message:
+        status === "completed"
+          ? "Tu reserva ha sido completada ✅"
+          : "Tu reserva ha sido cancelada ❌",
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  // ===========================================
+  // 🔴 Desconexión
+  // ===========================================
   socket.on("disconnect", () => {
     for (const [userId, id] of onlineUsers.entries()) {
-      if (id === socket.id) {
-        onlineUsers.delete(userId);
-        break;
-      }
+      if (id === socket.id) onlineUsers.delete(userId);
     }
     io.emit("updateOnlineUsers", Array.from(onlineUsers.keys()));
     updateActiveSockets(io.engine.clientsCount);
@@ -234,11 +311,8 @@ io.on("connection", (socket) => {
   });
 });
 
-// 🧠 Exportamos la instancia de Socket.IO
-export { io };
-
 // ==============================
-// 🧩 Middleware global de errores
+// 🧩 Middleware de errores
 // ==============================
 app.use((err, req, res, next) => {
   logger.error(`❌ Error en ${req.method} ${req.url} → ${err.message}`);
@@ -259,13 +333,3 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 export default server;
-// 📂 Servir archivos estáticos
-import path from "path";
-app.use("/uploads", express.static(path.resolve("uploads")));
-
-import uploadRoutes from "./routes/upload.routes.js";
-app.use("/api/upload", uploadRoutes);
-
-import chatRoutes from "./routes/chat.routes.js";
-app.use("/api/chats", chatRoutes);
-

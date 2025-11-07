@@ -1,58 +1,73 @@
-import express from "express";
-import {
-  createService,
-  getAllServices,
-  getServicesByProfessional,
-  updateService,
-  deleteService,
-  updateServiceStatus,
-} from "../controllers/service.controller.js";
+// ===============================================
+// 💼 SERVICE ROUTES — ServiGo Backend
+// ===============================================
 
-import { verifyToken, checkRole } from "../middlewares/auth.middleware.js";
+import express from "express";
+import { verifyToken } from "../middlewares/auth.middleware.js";
+import {
+  getServicesByClient,
+  getActiveServicesByProfessional,
+  createService,
+  rateProfessional,
+  cancelService,
+  deleteService,
+} from "../controllers/service.controller.js";
+import Service from "../models/Service.js";
 
 const router = express.Router();
 
-/**
- * @route   POST /api/services
- * @desc    Crear un nuevo servicio
- * @access  Solo profesionales
- */
-router.post("/", verifyToken, checkRole("profesional", "admin"), createService);
+/* =======================================================
+   🔹 Obtener servicios del cliente autenticado
+   ======================================================= */
+router.get("/", verifyToken, getServicesByClient);
 
-/**
- * @route   GET /api/services
- * @desc    Obtener todos los servicios (para clientes o admin)
- * @access  Público autenticado
- */
-router.get("/", verifyToken, checkRole("cliente", "admin"), getAllServices);
+/* =======================================================
+   👨‍🔧 Obtener servicios activos o completados del profesional
+   (ruta antigua: /profesional/activos)
+   ======================================================= */
+router.get("/profesional/activos", verifyToken, getActiveServicesByProfessional);
 
-/**
- * @route   GET /api/services/mis-servicios
- * @desc    Obtener servicios del profesional logueado
- * @access  Profesional
- */
-router.get("/mis-servicios", verifyToken, checkRole("profesional", "admin"), getServicesByProfessional);
+/* =======================================================
+   🟢 NUEVA RUTA: Obtener servicios activos del profesional
+   (para JobsActive.tsx en el panel profesional)
+   ======================================================= */
+router.get("/active", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
 
-/**
- * @route   PUT /api/services/:id
- * @desc    Actualizar un servicio
- * @access  Profesional o Admin
- */
-router.put("/:id", verifyToken, checkRole("profesional", "admin"), updateService);
+    // Buscar servicios asignados al profesional actual
+    const activeServices = await Service.find({
+      professional: userId,
+      status: { $in: ["active", "in_progress", "confirmed"] },
+    })
+      .populate("client", "name email")
+      .sort({ createdAt: -1 });
 
-/**
- * @route   DELETE /api/services/:id
- * @desc    Eliminar un servicio
- * @access  Profesional o Admin
- */
-router.delete("/:id", verifyToken, checkRole("profesional", "admin"), deleteService);
+    res.status(200).json(activeServices);
+  } catch (error) {
+    console.error("❌ Error al obtener servicios activos:", error);
+    res.status(500).json({ error: "Error al obtener los servicios activos" });
+  }
+});
+
+/* =======================================================
+   🧰 Crear nuevo servicio
+   ======================================================= */
+router.post("/", verifyToken, createService);
+
+/* =======================================================
+   🚫 Cancelar servicio
+   ======================================================= */
+router.patch("/:id/cancel", verifyToken, cancelService);
+
+/* =======================================================
+   ⭐ Valorar al profesional
+   ======================================================= */
+router.patch("/:id/rate", verifyToken, rateProfessional);
+
+/* =======================================================
+   🗑️ Eliminar servicio (admin o profesional creador)
+   ======================================================= */
+router.delete("/:id", verifyToken, deleteService);
 
 export default router;
-
-
-/**
- * @route   PATCH /api/services/:id/status
- * @desc    Actualizar estado del servicio (aceptar, completar, cancelar)
- * @access  Profesional / Admin
- */
-router.patch("/:id/status", verifyToken, checkRole("profesional", "admin"), updateServiceStatus);

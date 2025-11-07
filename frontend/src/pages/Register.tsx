@@ -1,4 +1,4 @@
-console.log("🧩 Renderizando Register.jsx");
+console.log("🧩 Renderizando Register.tsx");
 
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,35 +18,37 @@ export default function Register() {
     role: "", // 👈 se usará "cliente" o "profesional"
   });
 
+  // 🧩 Manejo de cambios en inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  // 🚀 Enviar formulario
+ const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
 
-    // 🔹 Validaciones básicas
-    if (form.password !== form.confirmPassword) {
-      alert("Las contraseñas no coinciden ❌");
-      return;
-    }
+  if (form.password !== form.confirmPassword) {
+    alert("❌ Las contraseñas no coinciden");
+    return;
+  }
 
-    if (!form.role) {
-      alert("Selecciona si eres Particular o Profesional ⚠️");
-      return;
-    }
+  if (!form.role) {
+    alert("⚠️ Selecciona si eres Particular o Profesional");
+    return;
+  }
 
-    try {
-      // 🔹 Llamada al backend con rol correcto
-      await register(form.name, form.email, form.password, form.role);
-      navigate("/perfil"); // ✅ Redirige al perfil tras registro
-    } catch (err) {
-      console.error("Error en el registro:", err);
-    }
-  };
+  try {
+    await register(form.name, form.email, form.password, form.role);
+    // ✅ La redirección ya la hace automáticamente el AuthContext
+  } catch (err) {
+    console.error("❌ Error en el registro:", err);
+  }
+};
+
+
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-cyan-400 to-green-300">
+    <div className="h-screen w-screen flex items-center justify-center bg-linear-to-br from-blue-600 via-cyan-400 to-green-300">
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -106,12 +108,12 @@ export default function Register() {
 
           {/* 🎯 Selector de rol */}
           <div className="flex justify-around mt-4">
-            {/* 👤 Particular (envía cliente al backend) */}
+            {/* 👤 Particular → cliente */}
             <motion.button
               type="button"
               onClick={() => setForm({ ...form, role: "cliente" })}
               whileTap={{ scale: 0.95 }}
-              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border ${
+              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border transition-all ${
                 form.role === "cliente"
                   ? "bg-blue-100 border-blue-600 text-blue-700"
                   : "border-gray-300 text-gray-600 hover:bg-gray-50"
@@ -126,7 +128,7 @@ export default function Register() {
               type="button"
               onClick={() => setForm({ ...form, role: "profesional" })}
               whileTap={{ scale: 0.95 }}
-              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border ${
+              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border transition-all ${
                 form.role === "profesional"
                   ? "bg-green-100 border-green-600 text-green-700"
                   : "border-gray-300 text-gray-600 hover:bg-gray-50"
@@ -137,7 +139,7 @@ export default function Register() {
             </motion.button>
           </div>
 
-          {/* 🚨 Errores */}
+          {/* 🚨 Mensaje de error */}
           {error && (
             <p className="text-red-600 text-sm mt-2 text-center">{error}</p>
           )}

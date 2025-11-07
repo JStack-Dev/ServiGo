@@ -1,32 +1,53 @@
 {
   "compilerOptions": {
+    /* ==============================
+       🚀 Configuración base
+    ============================== */
     "composite": true,
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
+
+    /* ==============================
+       ⚛️ JSX y React
+    ============================== */
     "jsx": "react-jsx",
     "jsxImportSource": "react",
+    "types": ["vite/client", "react", "react-dom", "node"],
+
+
+    /* ==============================
+       ⚙️ Bundler Mode (Vite 5)
+    ============================== */
+    "moduleResolution": "bundler",
+    "useDefineForClassFields": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    /* ==============================
+       🧠 Calidad y seguridad
+    ============================== */
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": "./src",
+    "forceConsistentCasingInFileNames": true, // ✅ Evita errores en imports entre Windows/Linux
 
-    /* ✅ Alias de rutas */
+    /* ==============================
+       🧱 Alias sincronizados con Vite
+    ============================== */
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"],
-      "@components/*": ["components/*"],
-      "@layouts/*": ["layouts/*"],
-      "@pages/*": ["pages/*"],
-      "@styles/*": ["styles/*"],
-      "@hooks/*": ["hooks/*"],
-      "@store/*": ["store/*"],
-      "@api/*": ["api/*"],
-      "@context/*": ["context/*"],
-      "@services/*": ["services/*"]
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@layouts/*": ["src/layouts/*"],
+      "@pages/*": ["src/pages/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@api/*": ["src/api/*"],
+      "@store/*": ["src/store/*"],
+      "@styles/*": ["src/styles/*"],
+      "@context/*": ["src/context/*"],
+      "@services/*": ["src/services/*"]
     }
   },
   "include": ["src"],

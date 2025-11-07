@@ -1,4 +1,5 @@
 "use client";
+
 import {
   createContext,
   useState,
@@ -6,16 +7,38 @@ import {
   useContext,
   type ReactNode,
 } from "react";
-import { loginUser, registerUser } from "@/services/auth.service";
+import { useNavigate } from "react-router-dom";
+import {
+  loginUser,
+  registerUser,
+  type AuthResponse,
+} from "@/services/auth.service";
 
-// 🧠 Tipos
+/* ===========================================
+ 🧠 Tipado del usuario según backend ServiGo
+=========================================== */
 export interface User {
-  id: string;
+  _id?: string;
+  id?: string;
   name: string;
   email: string;
-  role: string;
+  role: "cliente" | "profesional" | "admin";
+  level?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  averageRating?: number;
+  completedServices?: number;
+  badges?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  phone?: string;
+  profession?: string;
+  description?: string;
 }
 
+/* ===========================================
+ ⚙️ Tipado del contexto de autenticación
+=========================================== */
 export interface AuthContextProps {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -32,55 +55,87 @@ export interface AuthContextProps {
   logout: () => void;
 }
 
-// 🟢 Crear contexto
+/* ===========================================
+ 🟢 Creación del contexto global
+=========================================== */
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-// 🧩 Provider principal
+/* ===========================================
+ 🧩 Provider principal
+=========================================== */
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(
-    localStorage.getItem("token")
-  );
-  const [loading, setLoading] = useState<boolean>(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true); // ✅ FIX — empieza cargando
   const [error, setError] = useState<string | null>(null);
 
-  // 🔁 Cargar usuario almacenado
+  /* ===========================================
+   🔁 Cargar usuario almacenado (inicio app)
+  ============================================ */
   useEffect(() => {
+    const savedToken = localStorage.getItem("token");
     const savedUser = localStorage.getItem("user");
-    if (token && savedUser) {
+
+    if (savedToken && savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser: User = JSON.parse(savedUser);
+        setToken(savedToken);
+        setUser(parsedUser);
       } catch {
         localStorage.removeItem("user");
+        localStorage.removeItem("token");
       }
     }
-  }, [token]);
 
-  // 💾 Sincronizar token con localStorage
+    setLoading(false); // ✅ FIX — se marca terminado tras leer localStorage
+  }, []);
+
+  /* ===========================================
+   💾 Sincronizar token con localStorage
+  ============================================ */
   useEffect(() => {
     if (token) localStorage.setItem("token", token);
     else localStorage.removeItem("token");
   }, [token]);
 
-  // 🔐 Iniciar sesión
+  /* ===========================================
+   🔐 Iniciar sesión
+  ============================================ */
   const login = async (email: string, password: string): Promise<void> => {
     setLoading(true);
     setError(null);
+
     try {
-      const res = await loginUser(email, password);
+      const res: AuthResponse = await loginUser(email, password);
+
+      const normalizedUser: User = {
+        ...res.user,
+        _id: res.user._id ?? res.user.id ?? "",
+        role:
+          (res.user.role as "cliente" | "profesional" | "admin") || "cliente",
+      };
+
       setToken(res.token);
-      setUser(res.user);
+      setUser(normalizedUser);
       localStorage.setItem("token", res.token);
-      localStorage.setItem("user", JSON.stringify(res.user));
-    } catch (err) {
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+    } catch (err: unknown) {
       console.error("❌ Error al iniciar sesión:", err);
-      setError("Credenciales incorrectas");
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Credenciales incorrectas o servidor no disponible";
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🧾 Registrar usuario
+  /* ===========================================
+   🧾 Registrar nuevo usuario
+  ============================================ */
   const register = async (
     name: string,
     email: string,
@@ -89,39 +144,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<void> => {
     setLoading(true);
     setError(null);
+
     try {
-      const res = await registerUser(name, email, password, role);
+      const res: AuthResponse = await registerUser(name, email, password, role);
+
+      const normalizedUser: User = {
+        ...res.user,
+        _id: res.user._id ?? res.user.id ?? "",
+        role:
+          (res.user.role as "cliente" | "profesional" | "admin") || "cliente",
+      };
+
       setToken(res.token);
-      setUser(res.user);
+      setUser(normalizedUser);
       localStorage.setItem("token", res.token);
-      localStorage.setItem("user", JSON.stringify(res.user));
-    } catch (err) {
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+    } catch (err: unknown) {
       console.error("❌ Error al registrar usuario:", err);
-      setError("Error al registrarse");
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Error al registrarse, revisa los datos e inténtalo nuevamente";
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🚪 Cerrar sesión
+  /* ===========================================
+   🚪 Cerrar sesión
+  ============================================ */
   const logout = (): void => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    navigate("/"); // 👈 Redirige al inicio
   };
 
-  // ✅ Proveedor global del contexto
+  /* ===========================================
+   🧩 Devolver contexto global
+  ============================================ */
   return (
     <AuthContext.Provider
-      value={{ user, setUser, token, loading, error, login, register, logout }}
+      value={{
+        user,
+        setUser,
+        token,
+        loading,
+        error,
+        login,
+        register,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
-// 🪝 Hook personalizado para acceder al contexto
+/* ===========================================
+ 🪝 Hook personalizado
+=========================================== */
 export const useAuth = (): AuthContextProps => {
   const context = useContext(AuthContext);
   if (!context)

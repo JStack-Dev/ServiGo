@@ -1,33 +1,53 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/auth";
+/**
+ * 🌍 URL base del backend
+ * Asegúrate de tener en tu .env:
+ * VITE_API_URL=http://localhost:4000/api
+ */
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "http://localhost:4000/api";
+
+/* ============================================
+   🧠 Tipado de respuesta del backend
+============================================ */
 export interface AuthResponse {
   token: string;
   user: {
-    id: string;
+    _id?: string;
+    id?: string;
     name: string;
     email: string;
-    role: string;
+    role: "cliente" | "profesional" | "admin";
   };
 }
 
-/**
- * 🔹 Iniciar sesión de usuario
- */
-export async function loginUser(email: string, password: string): Promise<AuthResponse> {
-  const res = await axios.post(`${API_URL}/login`, { email, password });
+/* ============================================
+   🔐 Iniciar sesión
+============================================ */
+export async function loginUser(
+  email: string,
+  password: string
+): Promise<AuthResponse> {
+  // ✅ Usa la ruta correcta: /auth/login
+  const res = await axios.post(`${API_URL}/auth/login`, { email, password });
   return res.data;
 }
 
-/**
- * 🔹 Registrar un nuevo usuario con rol
- */
+/* ============================================
+   🧾 Registrar usuario
+============================================ */
 export async function registerUser(
   name: string,
   email: string,
   password: string,
   role: string
 ): Promise<AuthResponse> {
-  const res = await axios.post(`${API_URL}/register`, { name, email, password, role });
+  // ✅ Usa la ruta correcta: /auth/register
+  const res = await axios.post(`${API_URL}/auth/register`, {
+    name,
+    email,
+    password,
+    role,
+  });
   return res.data;
 }

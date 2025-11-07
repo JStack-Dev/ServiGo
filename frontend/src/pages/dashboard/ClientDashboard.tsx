@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "@/services/api";
+import axios from "axios";
 import { useAuth } from "@/context/authContext";
 
 interface Service {
@@ -19,7 +19,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await api.get("/services/mine");
+        const res = await axios.get("/services/mine");
         setServices(res.data.services);
       } catch (err) {
         console.error("❌ Error al cargar servicios:", err);

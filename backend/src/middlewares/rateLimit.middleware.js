@@ -2,22 +2,32 @@
 import rateLimit from "express-rate-limit";
 import slowDown from "express-slow-down";
 
-// 🚦 Limitador de velocidad (máx 100 peticiones / 15 minutos por IP)
-export const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Máximo de peticiones por IP
-  message: {
-    success: false,
-    message: "Demasiadas peticiones desde esta IP, inténtalo más tarde.",
-  },
-  standardHeaders: true, // Devuelve info de rate-limit en cabeceras
-  legacyHeaders: false,
-});
+const isDev = process.env.NODE_ENV !== "production"; // true cuando estás en local
 
-// 🐢 Acelerador progresivo (v2 compatible)
-export const speedLimiter = slowDown({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  delayAfter: 50, // Empieza a ralentizar tras 50 peticiones
-  delayMs: () => 500, // Siempre añade 500 ms por cada petición extra
-});
+/* ==============================================
+   🛡️ Limitador de velocidad inteligente
+   Solo se activa en producción
+============================================== */
+export const limiter = isDev
+  ? (req, res, next) => next() // 🚀 sin límites en desarrollo
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutos
+      max: 100, // Máx. peticiones por IP
+      message: {
+        success: false,
+        message: "Demasiadas peticiones desde esta IP, inténtalo más tarde.",
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
 
+/* ==============================================
+   🐢 Acelerador progresivo (solo producción)
+============================================== */
+export const speedLimiter = isDev
+  ? (req, res, next) => next()
+  : slowDown({
+      windowMs: 15 * 60 * 1000, // 15 minutos
+      delayAfter: 50, // Empieza a ralentizar tras 50 peticiones
+      delayMs: () => 500, // Añade 500 ms por cada petición extra
+    });

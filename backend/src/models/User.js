@@ -1,4 +1,6 @@
-// src/models/User.js
+// ==============================
+// 👤 Modelo de Usuario – ServiGo
+// ==============================
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 
@@ -27,12 +29,21 @@ const userSchema = new mongoose.Schema(
       enum: ["cliente", "profesional", "admin"],
       default: "cliente",
     },
+
+    // 👷 Especialidad / oficio (solo para profesionales)
+    specialty: {
+      type: String,
+      trim: true,
+      default: "General",
+    },
+
     isActive: {
       type: Boolean,
       default: true,
     },
     refreshToken: { type: String, default: null },
-    // 🌍 Ubicación geoespacial para el modo urgencia
+
+    // 🌍 Ubicación geoespacial (para futuras búsquedas por cercanía)
     location: {
       type: {
         type: String,
@@ -44,11 +55,13 @@ const userSchema = new mongoose.Schema(
         default: [0, 0],
       },
     },
+
     // 🟢 Estado de disponibilidad del profesional
     isAvailable: {
       type: Boolean,
       default: true, // true = disponible para urgencias
     },
+
     // ⭐ Gamificación y puntuaciones
     averageRating: {
       type: Number,

@@ -5,23 +5,37 @@ import { useAuth } from "@/context/authContext";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { login, loading, error } = useAuth(); // ✅ ahora usamos el contexto real
+  const { login, loading, error, user } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // 🔹 Iniciar sesión
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
-      await login(email, password); // 🔐 login real que guarda token
-      navigate("/perfil"); // 🚀 redirige tras login exitoso
+      await login(email, password);
+
+      // Esperamos a que el user esté disponible en contexto
+      setTimeout(() => {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+        if (storedUser.role === "profesional") {
+          navigate("/perfil-profesional");
+        } else if (storedUser.role === "admin") {
+          navigate("/dashboard");
+        } else {
+          navigate("/perfil");
+        }
+      }, 300);
     } catch (err) {
       console.error("❌ Error al iniciar sesión:", err);
     }
   };
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-cyan-400 to-green-300">
+    <div className="h-screen w-screen flex items-center justify-center bg-linear-to-br from-blue-600 via-cyan-400 to-green-300">
       {/* 🧱 Card principal */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
@@ -33,7 +47,7 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-gray-800 mb-2">ServiGo</h1>
         <p className="text-gray-700 mb-6">Inicia sesión en tu cuenta</p>
 
-        {/* 🧠 Formulario de inicio de sesión */}
+        {/* 🧠 Formulario */}
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <input
             type="email"

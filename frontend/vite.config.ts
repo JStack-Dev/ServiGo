@@ -7,7 +7,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
-import tailwindcss from "@tailwindcss/postcss"; // ✅ NUEVO
+import tailwindcss from "@tailwindcss/postcss";
 import autoprefixer from "autoprefixer";
 
 export default defineConfig({
@@ -38,10 +38,18 @@ export default defineConfig({
       "@store": path.resolve(__dirname, "./src/store"),
       "@styles": path.resolve(__dirname, "./src/styles"),
       "@context": path.resolve(__dirname, "./src/context"),
+      "@services": path.resolve(__dirname, "./src/services"),
     },
   },
 
-  server: { port: 5173, open: true },
+  define: {
+    "process.env": {},
+  },
+
+  server: {
+    port: 5173,
+    open: true,
+  },
 
   build: {
     minify: "esbuild",
