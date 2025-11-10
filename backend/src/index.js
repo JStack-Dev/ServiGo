@@ -29,15 +29,23 @@ const app = express();
 // ==============================
 // 🛡️ Seguridad avanzada
 // ==============================
-const allowedOrigins = ["http://localhost:5173", "https://servigo.vercel.app"];
+const allowedOrigins = [
+  "http://localhost:5173", // desarrollo local
+  "https://servigo.vercel.app", // dominio antiguo (por compatibilidad)
+  "https://servi-go-nu7z.vercel.app" // ✅ dominio real del frontend en Vercel
+];
 
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error("❌ Origen no permitido por CORS"));
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`❌ Origen no permitido por CORS: ${origin}`);
+      callback(new Error("Origen no permitido por CORS"));
+    }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  credentials: true,
+  credentials: true
 };
 
 const helmetConfig = helmet({
@@ -51,11 +59,11 @@ const helmetConfig = helmet({
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "https:", "wss:"],
       fontSrc: ["'self'", "https:", "data:"],
-      frameSrc: ["'none'"],
-    },
+      frameSrc: ["'none'"]
+    }
   },
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  frameguard: { action: "deny" },
+  frameguard: { action: "deny" }
 });
 
 import { limiter, speedLimiter } from "./middlewares/rateLimit.middleware.js";
@@ -83,7 +91,7 @@ app.use((req, res, next) => {
     logger.info(`${req.method} ${req.originalUrl}`, {
       statusCode: res.statusCode,
       responseTime: `${duration}ms`,
-      userAgent: req.headers["user-agent"],
+      userAgent: req.headers["user-agent"]
     });
   });
   next();
@@ -193,7 +201,12 @@ io.on("connection", (socket) => {
 
   socket.on("sendMessage", async ({ serviceId, sender, receiver, content }) => {
     try {
-      const message = await Message.create({ serviceId, sender, receiver, content });
+      const message = await Message.create({
+        serviceId,
+        sender,
+        receiver,
+        content
+      });
       io.to(`room_service_${serviceId}`).emit("newMessage", message);
     } catch (error) {
       logger.error(`❌ Error al enviar mensaje: ${error.message}`);
@@ -209,7 +222,7 @@ io.on("connection", (socket) => {
       if (updated.modifiedCount > 0) {
         io.to(`room_service_${serviceId}`).emit("messagesMarkedAsRead", {
           serviceId,
-          userId,
+          userId
         });
         logger.info(`📘 ${updated.modifiedCount} mensajes marcados como leídos`);
       }
@@ -239,7 +252,7 @@ io.on("connection", (socket) => {
       const message = {
         sender,
         text,
-        createdAt: new Date(),
+        createdAt: new Date()
       };
 
       chat.messages.push(message);
@@ -247,18 +260,18 @@ io.on("connection", (socket) => {
 
       io.to(`direct_${chatId}`).emit("receiveDirectMessage", message);
       logger.info(`💬 Nuevo mensaje directo en chat ${chatId}`);
-      } catch (error) {
-        logger.error(`❌ Error en sendDirectMessage: ${error.message}`);
-      }
-    });
-  
-      // 💭 Estado "escribiendo..."
-socket.on("typingDirect", ({ chatId, userId }) => {
-  socket.to(`direct_${chatId}`).emit("userTypingDirect", { userId });
-});
+    } catch (error) {
+      logger.error(`❌ Error en sendDirectMessage: ${error.message}`);
+    }
+  });
 
-socket.on("stopTypingDirect", ({ chatId, userId }) => {
-  socket.to(`direct_${chatId}`).emit("userStopTypingDirect", { userId });
+  // 💭 Estado "escribiendo..."
+  socket.on("typingDirect", ({ chatId, userId }) => {
+    socket.to(`direct_${chatId}`).emit("userTypingDirect", { userId });
+  });
+
+  socket.on("stopTypingDirect", ({ chatId, userId }) => {
+    socket.to(`direct_${chatId}`).emit("userStopTypingDirect", { userId });
   });
 
   // ===========================================
@@ -282,7 +295,7 @@ socket.on("stopTypingDirect", ({ chatId, userId }) => {
       title: "Nueva reserva",
       message: `Tienes una nueva reserva #${bookingId} pendiente 🧾`,
       read: false,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     });
   });
 
@@ -294,7 +307,7 @@ socket.on("stopTypingDirect", ({ chatId, userId }) => {
           ? "Tu reserva ha sido completada ✅"
           : "Tu reserva ha sido cancelada ❌",
       read: false,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     });
   });
 
@@ -318,7 +331,7 @@ app.use((err, req, res, next) => {
   logger.error(`❌ Error en ${req.method} ${req.url} → ${err.message}`);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || "Error interno del servidor",
+    message: err.message || "Error interno del servidor"
   });
 });
 
