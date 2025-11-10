@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --force",
     "lint": "eslint .",
     "preview": "vite preview",
     "clean": "powershell -Command \"if (Test-Path 'node_modules') { Remove-Item -Recurse -Force 'node_modules' }; if (Test-Path 'dist') { Remove-Item -Recurse -Force 'dist' }; if (Test-Path 'package-lock.json') { Remove-Item -Force 'package-lock.json' }\""
@@ -42,6 +42,7 @@
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
     "postcss": "^8.5.6",
+    "rollup": "^4.21.0",
     "rollup-plugin-visualizer": "^6.0.5",
     "tailwindcss": "^4.1.16",
     "typescript": "~5.9.3",
