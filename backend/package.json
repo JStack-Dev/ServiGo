@@ -9,11 +9,12 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "cross-env NODE_ENV=production node src/index.js",
-    "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles --forceExit"
-  },
+"scripts": {
+  "dev": "nodemon src/index.js",
+  "start": "NODE_ENV=production node src/index.js",
+  "test": "NODE_ENV=test jest --runInBand --detectOpenHandles --forceExit"
+},
+
   "keywords": [
     "servigo",
     "nodejs",
