@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react";
 
 /* ============================================================
    🧠 Tipado fuerte para los servicios
-   ============================================================ */
+============================================================ */
 interface Service {
   _id: string;
   title: string;
@@ -15,8 +15,8 @@ interface Service {
 
 /* ============================================================
    🧩 Tabla de servicios — Panel Admin
-   ============================================================ */
-export default function ServicesTable(): JSX.Element {
+============================================================ */
+export default function ServicesTable() {
   const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { getStatsOverview } from "@/api/admin";
-import MetricsOverview from "./MetricsOverview";
+import MetricsOverview, { MetricsStats } from "./MetricsOverview";
 import UsersTable from "./UsersTable";
 import ServicesTable from "./ServicesTable";
 import BookingsTable from "./BookingsTable";
@@ -10,20 +10,10 @@ import { BarChart3, Users, Briefcase, FileText } from "lucide-react";
 import LogsViewer from "./LogsViewer";
 
 /* ============================================================
-   🧠 Tipado fuerte
+   🧠 Tipado fuerte del Dashboard
 ============================================================ */
-interface StatsOverview {
-  totalUsers: number;
-  totalServices: number;
-  totalBookings: number;
-  totalRevenue: number;
-}
-
-/* ============================================================
-   🧰 Dashboard Admin
-============================================================ */
-export default function DashboardAdmin(): JSX.Element {
-  const [stats, setStats] = useState<StatsOverview | null>(null);
+export default function DashboardAdmin() {
+  const [stats, setStats] = useState<MetricsStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
@@ -34,13 +24,14 @@ export default function DashboardAdmin(): JSX.Element {
     const fetchStats = async (): Promise<void> => {
       try {
         const res = await getStatsOverview();
-        // Verificamos que el backend devuelve un objeto con las claves esperadas
         if (res?.data) {
           setStats({
             totalUsers: res.data.totalUsers ?? 0,
-            totalServices: res.data.totalServices ?? 0,
             totalBookings: res.data.totalBookings ?? 0,
-            totalRevenue: res.data.totalRevenue ?? 0,
+            totalIncome: res.data.totalIncome ?? 0,
+            activeBookings: res.data.activeBookings ?? 0,
+            completedBookings: res.data.completedBookings ?? 0,
+            canceledBookings: res.data.canceledBookings ?? 0,
           });
         }
       } catch (err) {

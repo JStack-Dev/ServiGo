@@ -36,7 +36,7 @@ interface Message {
 /* ============================================================
    💬 ChatProfesional — vista para profesionales
 ============================================================ */
-export default function ChatProfesional(): JSX.Element {
+export default function ChatProfesional(){
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
   const {

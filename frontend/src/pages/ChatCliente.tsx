@@ -35,7 +35,7 @@ interface User {
 /* ============================================================
    💬 ChatCliente — vista de chat para clientes
 ============================================================ */
-export default function ChatCliente(): JSX.Element {
+export default function ChatCliente(){
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
   const {

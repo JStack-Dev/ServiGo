@@ -1,6 +1,6 @@
 // src/pages/dashboard/index.ts
 
-export { default as AdminDashboard } from "./AdminDashboard";
+export { default as AdminDashboard } from "../admin/DashboardAdmin";
 export { default as TechnicianDashboard } from "./TechnicianDashboard";
 export { default as ClientDashboard } from "./ClientDashboard";
 

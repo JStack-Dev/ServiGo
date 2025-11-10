@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui/Card";
-
 import {
   ResponsiveContainer,
   BarChart,
@@ -11,7 +10,7 @@ import {
 
 /* ============================================================
    🧠 Tipado fuerte: métricas globales del panel admin
-   ============================================================ */
+============================================================ */
 export interface MetricsStats {
   totalUsers: number;
   totalBookings: number;
@@ -23,7 +22,7 @@ export interface MetricsStats {
 
 /* ============================================================
    📊 Componente principal
-   ============================================================ */
+============================================================ */
 interface MetricsOverviewProps {
   stats: MetricsStats;
 }
