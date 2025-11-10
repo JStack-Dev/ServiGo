@@ -30,10 +30,12 @@ const app = express();
 // 🛡️ Seguridad avanzada
 // ==============================
 const allowedOrigins = [
-  "http://localhost:5173", // desarrollo local
-  "https://servigo.vercel.app", // dominio antiguo (por compatibilidad)
-  "https://servi-go-nu7z.vercel.app" // ✅ dominio real del frontend en Vercel
+  "http://localhost:5173",
+  "https://servigo.vercel.app",
+  "https://servi-go.vercel.app",
+  "https://servi-go-nu7z.vercel.app" // ✅ dominio actual del frontend en producción
 ];
+
 
 const corsOptions = {
   origin(origin, callback) {
