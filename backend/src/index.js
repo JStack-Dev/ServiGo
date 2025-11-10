@@ -33,22 +33,32 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://servigo.vercel.app",
   "https://servi-go.vercel.app",
-  "https://servi-go-nu7z.vercel.app" // ✅ dominio actual del frontend en producción
+  "https://servi-go-nu7z.vercel.app",
+  "https://servigo-04kk.onrender.com"
 ];
+
 
 
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`❌ Origen no permitido por CORS: ${origin}`);
-      callback(new Error("Origen no permitido por CORS"));
+    // ✅ Permite peticiones sin cabecera Origin (como OPTIONS preflight)
+    if (!origin) {
+      return callback(null, true);
     }
+
+    // ✅ Permite solo los dominios seguros definidos
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.warn(`❌ Origen no permitido por CORS: ${origin}`);
+    return callback(new Error("Origen no permitido por CORS"));
   },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  credentials: true
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"]
 };
+
 
 const helmetConfig = helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
