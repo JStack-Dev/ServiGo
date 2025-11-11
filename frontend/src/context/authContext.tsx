@@ -23,6 +23,7 @@ export interface User {
   name: string;
   email: string;
   role: "cliente" | "profesional" | "admin";
+  specialty?: string; // ✅ añadimos el campo profesión
   level?: string;
   isActive?: boolean;
   isAvailable?: boolean;
@@ -50,7 +51,8 @@ export interface AuthContextProps {
     name: string,
     email: string,
     password: string,
-    role: string
+    role: string,
+    specialty?: string // ✅ nuevo parámetro opcional
   ) => Promise<void>;
   logout: () => void;
 }
@@ -68,11 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true); // ✅ FIX — empieza cargando
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   /* ===========================================
-   🔁 Cargar usuario almacenado (inicio app)
+   🔁 Cargar usuario almacenado al iniciar
   ============================================ */
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
@@ -89,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setLoading(false); // ✅ FIX — se marca terminado tras leer localStorage
+    setLoading(false);
   }, []);
 
   /* ===========================================
@@ -121,6 +123,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(normalizedUser);
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+      // ✅ Redirigir según el rol
+      if (normalizedUser.role === "profesional") {
+        navigate("/profesional/perfil");
+      } else {
+        navigate("/cliente/perfil");
+      }
     } catch (err: unknown) {
       console.error("❌ Error al iniciar sesión:", err);
       const message =
@@ -140,13 +149,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     password: string,
-    role: string
+    role: string,
+    specialty?: string
   ): Promise<void> => {
     setLoading(true);
     setError(null);
 
     try {
-      const res: AuthResponse = await registerUser(name, email, password, role);
+      const res: AuthResponse = await registerUser(
+        name,
+        email,
+        password,
+        role,
+        specialty
+      );
 
       const normalizedUser: User = {
         ...res.user,
@@ -159,6 +175,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(normalizedUser);
       localStorage.setItem("token", res.token);
       localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+      // ✅ Redirigir automáticamente después del registro
+      if (normalizedUser.role === "profesional") {
+        navigate("/profesional/perfil");
+      } else {
+        navigate("/cliente/perfil");
+      }
     } catch (err: unknown) {
       console.error("❌ Error al registrar usuario:", err);
       const message =
@@ -179,12 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/"); // 👈 Redirige al inicio
+    navigate("/");
   };
 
-  /* ===========================================
-   🧩 Devolver contexto global
-  ============================================ */
   return (
     <AuthContext.Provider
       value={{

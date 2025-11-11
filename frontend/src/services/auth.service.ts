@@ -1,53 +1,69 @@
-import axios from "axios";
+// ================================
+// 🧠 Servicio de Autenticación — ServiGo
+// ================================
 
-/**
- * 🌍 URL base del backend
- * Asegúrate de tener en tu .env:
- * VITE_API_URL=http://localhost:4000/api
- */
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "http://localhost:4000/api";
+import { type User } from "@/context/authContext";
 
-/* ============================================
-   🧠 Tipado de respuesta del backend
-============================================ */
 export interface AuthResponse {
+  message: string;
+  user: User;
   token: string;
-  user: {
-    _id?: string;
-    id?: string;
-    name: string;
-    email: string;
-    role: "cliente" | "profesional" | "admin";
-  };
 }
 
-/* ============================================
-   🔐 Iniciar sesión
-============================================ */
-export async function loginUser(
+/* ===========================================
+ 🔐 Iniciar sesión
+=========================================== */
+export const loginUser = async (
   email: string,
   password: string
-): Promise<AuthResponse> {
-  // ✅ Usa la ruta correcta: /auth/login
-  const res = await axios.post(`${API_URL}/auth/login`, { email, password });
-  return res.data;
-}
+): Promise<AuthResponse> => {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 
-/* ============================================
-   🧾 Registrar usuario
-============================================ */
-export async function registerUser(
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Error al iniciar sesión");
+  }
+
+  return res.json();
+};
+
+/* ===========================================
+ 🧾 Registrar nuevo usuario
+=========================================== */
+export const registerUser = async (
   name: string,
   email: string,
   password: string,
-  role: string
-): Promise<AuthResponse> {
-  // ✅ Usa la ruta correcta: /auth/register
-  const res = await axios.post(`${API_URL}/auth/register`, {
+  role: string,
+  specialty?: string
+): Promise<AuthResponse> => {
+  // ✅ Construimos el body dinámicamente
+  const body: Record<string, string> = {
     name,
     email,
     password,
     role,
+  };
+
+  // Solo enviamos specialty si existe y no está vacío
+  if (specialty && specialty.trim() !== "") {
+    body.specialty = specialty.trim();
+  }
+
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
-  return res.data;
-}
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || "Error al registrarse");
+  }
+
+  return res.json();
+};

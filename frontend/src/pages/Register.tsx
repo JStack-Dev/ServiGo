@@ -1,11 +1,10 @@
-console.log("🧩 Renderizando Register.tsx");
+"use client";
 
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
 import { motion } from "framer-motion";
 import { Briefcase, User } from "lucide-react";
-import type { AxiosError } from "axios";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -16,19 +15,19 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "", // 👈 "cliente" o "profesional"
+    role: "",
+    specialty: "", // ✅ nuevo campo profesión
   });
 
-  // 🧩 Manejo de cambios en los inputs
+  // 🧠 Manejar cambios de inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   // 🚀 Enviar formulario
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // ⚙️ Validaciones previas
     if (form.password !== form.confirmPassword) {
       alert("❌ Las contraseñas no coinciden");
       return;
@@ -39,34 +38,26 @@ export default function Register() {
       return;
     }
 
+    if (form.role === "profesional" && !form.specialty.trim()) {
+      alert("⚠️ Debes indicar tu profesión");
+      return;
+    }
+
     try {
-      await register(form.name, form.email, form.password, form.role);
-      // ✅ Redirección manejada por AuthContext
-    } catch (err: unknown) {
+      await register(
+        form.name,
+        form.email,
+        form.password,
+        form.role,
+        form.specialty
+      );
+    } catch (err) {
       console.error("❌ Error en el registro:", err);
-
-      let backendMessage = "Error al registrarse, inténtalo de nuevo.";
-
-      // 🔍 Detectar si es un error Axios con mensaje del backend
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "response" in err &&
-        (err as AxiosError<{ error?: string }>).response?.data?.error
-      ) {
-        backendMessage = (err as AxiosError<{ error?: string }>).response?.data
-          ?.error as string;
-      } else if (err instanceof Error) {
-        backendMessage = err.message;
-      }
-
-      // 📢 Mostrar mensaje claro al usuario
-      alert(backendMessage);
     }
   };
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-linear-to-br from-blue-600 via-cyan-400 to-green-300">
+    <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-cyan-400 to-green-300">
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -160,7 +151,22 @@ export default function Register() {
             </motion.button>
           </div>
 
-          {/* 🚨 Mensaje de error global */}
+          {/* 🧰 Campo visible solo si el rol es profesional */}
+          {form.role === "profesional" && (
+            <motion.input
+              type="text"
+              name="specialty"
+              value={form.specialty}
+              onChange={handleChange}
+              placeholder="¿Cuál es tu profesión? (Ej: Electricista, Fontanero...)"
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 
+                         focus:ring-2 focus:ring-green-500 outline-none 
+                         text-black placeholder-gray-400"
+              required
+            />
+          )}
+
+          {/* 🚨 Mensaje de error */}
           {error && (
             <p className="text-red-600 text-sm mt-2 text-center">{error}</p>
           )}
