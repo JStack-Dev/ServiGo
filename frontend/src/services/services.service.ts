@@ -1,8 +1,9 @@
-import axios from "axios";
+// ===============================
+// 💼 Servicio de Servicios (Bookings) — ServiGo
+// ===============================
 
-const API_URL = import.meta.env.VITE_API_URL;
+import api from "@/api/api";
 
-// 📦 Tipado de servicio
 export interface Servicio {
   _id: string;
   title: string;
@@ -20,11 +21,8 @@ export interface Servicio {
 
 // 🔹 Obtener servicios por estado
 export const getServicesByStatus = async (
-  status: "active" | "pending" | "completed",
-  token: string
+  status: "active" | "pending" | "completed"
 ): Promise<Servicio[]> => {
-  const res = await axios.get(`${API_URL}/services?status=${status}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await api.get(`/api/services?status=${status}`);
   return res.data;
 };
