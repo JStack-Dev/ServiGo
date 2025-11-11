@@ -130,6 +130,14 @@ app.use((req, res, next) => {
 // 📁 Archivos estáticos
 app.use("/uploads", express.static(path.resolve("uploads")));
 
+// ✅ Middleware para corregir rutas duplicadas /api/api
+app.use((req, res, next) => {
+  if (req.url.startsWith("/api/api")) {
+    req.url = req.url.replace("/api/api", "/api");
+  }
+  next();
+});
+
 // ==============================
 // 🔗 Rutas API
 // ==============================

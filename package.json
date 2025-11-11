@@ -1,0 +1,8 @@
+{
+  "name": "servigo-fullstack",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy:all": "powershell -ExecutionPolicy Bypass -File ./deploy-all.ps1"
+  }
+}
