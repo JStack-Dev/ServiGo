@@ -1,13 +1,21 @@
+// ===============================
+// 👤 Rutas de Usuario – ServiGo
+// ===============================
+
 import express from "express";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 import User from "../models/User.js";
+import {
+  getSpecialties,
+  getAllProfessionals,
+} from "../controllers/user.controller.js";
 
 const router = express.Router();
 
 /**
  * @route GET /api/users
  * @desc Listar usuarios (profesionales, clientes o todos)
- * @access Público o autenticado (según necesidad)
+ * @access Público
  */
 router.get("/", async (req, res) => {
   try {
@@ -17,8 +25,9 @@ router.get("/", async (req, res) => {
     if (role) filter.role = role;
     if (specialty) filter.specialty = new RegExp(specialty, "i"); // búsqueda insensible a mayúsculas
 
-    const users = await User.find(filter)
-      .select("name email role specialty phone averageRating isAvailable");
+    const users = await User.find(filter).select(
+      "name email role specialty phone averageRating isAvailable"
+    );
 
     res.status(200).json(users);
   } catch (error) {
@@ -52,5 +61,19 @@ router.get("/profile", verifyToken, async (req, res) => {
     res.status(500).json({ error: "Error al obtener el perfil" });
   }
 });
+
+/**
+ * @route GET /api/users/categories
+ * @desc Listar categorías (profesiones únicas)
+ * @access Público
+ */
+router.get("/categories", getSpecialties);
+
+/**
+ * @route GET /api/users/professionals
+ * @desc Listar todos los profesionales con info básica
+ * @access Público
+ */
+router.get("/professionals", getAllProfessionals);
 
 export default router;

@@ -11,9 +11,9 @@ import {
   validatePassword,
 } from "../middlewares/sanitize.middleware.js";
 
-// =====================================
-// 🔑 Generar token JWT
-// =====================================
+/* =====================================
+ 🔑 Generar token JWT
+===================================== */
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
@@ -22,12 +22,12 @@ const generateToken = (user) => {
   );
 };
 
-// =====================================
-// 🧩 Registro de usuario
-// =====================================
+/* =====================================
+ 🧩 Registro de usuario
+===================================== */
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, specialty } = req.body;
     console.log("🧩 BODY RECIBIDO:", req.body);
 
     // ✅ Validaciones básicas
@@ -41,7 +41,6 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ error: "Correo no válido" });
     }
 
-    // ⚠️ IMPORTANTE: la validación de contraseña debe coincidir con el backend
     if (!validatePassword(password)) {
       return res.status(400).json({
         error:
@@ -49,7 +48,6 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // ⚙️ Validar rol permitido
     const allowedRoles = ["cliente", "profesional", "admin"];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ error: `Rol no permitido: ${role}` });
@@ -61,8 +59,18 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ error: "El email ya está registrado" });
     }
 
-    // 🆕 Crear usuario
-    const newUser = new User({ name, email, password, role });
+    // 🧰 Crear nuevo usuario con profesión si aplica
+    const newUser = new User({
+      name,
+      email,
+      password,
+      role,
+      specialty:
+        role === "profesional"
+          ? specialty?.trim() || "General"
+          : undefined, // 👈 solo profesionales
+    });
+
     await newUser.save();
 
     const token = generateToken(newUser);
@@ -89,21 +97,19 @@ export const registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error al registrar usuario:", error);
-    // 🔎 Respuesta de error detallada
     res.status(500).json({
       error: error.message || "Error en el servidor",
     });
   }
 };
 
-// =====================================
-// 🧩 Login de usuario
-// =====================================
+/* =====================================
+ 🧩 Login de usuario
+===================================== */
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // ✅ Validaciones básicas
     if (!email || !password) {
       return res
         .status(400)
@@ -114,19 +120,16 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ error: "Correo no válido" });
     }
 
-    // 🔍 Buscar usuario
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    // 🔑 Verificar contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Contraseña incorrecta" });
     }
 
-    // 🪪 Generar token
     const token = generateToken(user);
     const { password: _, ...userData } = user.toObject();
 

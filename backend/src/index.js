@@ -14,6 +14,7 @@ import { createServer } from "http";
 import logger, { attachLoggerSocket } from "./config/logger.js";
 import { initSocket } from "./config/socket.js";
 
+
 // 📦 Modelos base
 import Message from "./models/Message.js";
 import Notification from "./models/Notification.js";
@@ -162,7 +163,9 @@ import chatRoutes from "./routes/chat.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
-import chatDirectRoutes from "./routes/chatDirect.routes.js"; // ✅ nuevo import
+import chatDirectRoutes from "./routes/chatDirect.routes.js"; 
+import userRoutes from "./routes/user.routes.js";
+
 
 // 🧩 Registrar rutas base
 app.use("/api/auth", authRoutes);
@@ -187,6 +190,7 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/direct-chats", chatDirectRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/api", (req, res) => {
   res.json({ mensaje: "Servidor ServiGo funcionando correctamente 🚀" });
