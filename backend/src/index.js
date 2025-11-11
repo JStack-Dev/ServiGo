@@ -36,17 +36,17 @@ const allowedOrigins = [
   /^https:\/\/servi-go.*\.vercel\.app$/,
 ];
 
-
-
 const corsOptions = {
   origin(origin, callback) {
     // ✅ Permite peticiones sin cabecera Origin (como OPTIONS preflight)
-    if (!origin) {
-      return callback(null, true);
-    }
+    if (!origin) return callback(null, true);
 
     // ✅ Permite solo los dominios seguros definidos
-    if (allowedOrigins.includes(origin)) {
+    if (
+      allowedOrigins.some((o) =>
+        o instanceof RegExp ? o.test(origin) : o === origin
+      )
+    ) {
       return callback(null, true);
     }
 
@@ -55,9 +55,8 @@ const corsOptions = {
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
-
 
 const helmetConfig = helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -70,11 +69,11 @@ const helmetConfig = helmet({
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "https:", "wss:"],
       fontSrc: ["'self'", "https:", "data:"],
-      frameSrc: ["'none'"]
-    }
+      frameSrc: ["'none'"],
+    },
   },
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  frameguard: { action: "deny" }
+  frameguard: { action: "deny" },
 });
 
 import { limiter, speedLimiter } from "./middlewares/rateLimit.middleware.js";
@@ -87,7 +86,24 @@ import { recordRequest, updateActiveSockets } from "./services/metrics.service.j
 // ==============================
 app.use(helmetConfig);
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+
+// ✅ Compatibilidad con Express 5: manejador manual para OPTIONS
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+    );
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 app.use(limiter);
 app.use(speedLimiter);
 app.use(express.json());
@@ -103,7 +119,7 @@ app.use((req, res, next) => {
     logger.info(`${req.method} ${req.originalUrl}`, {
       statusCode: res.statusCode,
       responseTime: `${duration}ms`,
-      userAgent: req.headers["user-agent"]
+      userAgent: req.headers["user-agent"],
     });
   });
   next();
@@ -217,7 +233,7 @@ io.on("connection", (socket) => {
         serviceId,
         sender,
         receiver,
-        content
+        content,
       });
       io.to(`room_service_${serviceId}`).emit("newMessage", message);
     } catch (error) {
@@ -234,7 +250,7 @@ io.on("connection", (socket) => {
       if (updated.modifiedCount > 0) {
         io.to(`room_service_${serviceId}`).emit("messagesMarkedAsRead", {
           serviceId,
-          userId
+          userId,
         });
         logger.info(`📘 ${updated.modifiedCount} mensajes marcados como leídos`);
       }
@@ -264,7 +280,7 @@ io.on("connection", (socket) => {
       const message = {
         sender,
         text,
-        createdAt: new Date()
+        createdAt: new Date(),
       };
 
       chat.messages.push(message);
@@ -307,7 +323,7 @@ io.on("connection", (socket) => {
       title: "Nueva reserva",
       message: `Tienes una nueva reserva #${bookingId} pendiente 🧾`,
       read: false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     });
   });
 
@@ -319,7 +335,7 @@ io.on("connection", (socket) => {
           ? "Tu reserva ha sido completada ✅"
           : "Tu reserva ha sido cancelada ❌",
       read: false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     });
   });
 
@@ -343,7 +359,7 @@ app.use((err, req, res, next) => {
   logger.error(`❌ Error en ${req.method} ${req.url} → ${err.message}`);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || "Error interno del servidor"
+    message: err.message || "Error interno del servidor",
   });
 });
 
