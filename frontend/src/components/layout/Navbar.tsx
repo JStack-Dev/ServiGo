@@ -1,26 +1,42 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Hammer, AlertTriangle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { getCategories } from "@/services/user.service";
 
 /* ============================================================
-   🧭 Navbar — ServiGo
-   Categorías + Reportar incidencia
+   🧭 Navbar — ServiGo (versión dinámica)
+   Muestra categorías reales del backend
 ============================================================ */
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const categories = [
-    "General",
-    "Carpintero",
-    "Albañil",
-    "Fontanero",
-    "Electricista",
-    "Pintor",
-    "Jardinero",
-    "Cerrajero",
-  ];
+  // 🔹 Cargar categorías desde el backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories();
+        const categoryNames = data.map((cat) => cat.specialty);
+        setCategories(categoryNames);
+      } catch (error) {
+        console.error("❌ Error al cargar categorías:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // 🔹 Navegar a la página de la categoría
+  const handleCategoryClick = (category: string) => {
+    navigate(`/categorias/${encodeURIComponent(category)}`);
+    setOpenMenu(false);
+  };
 
   return (
     <nav className="bg-white dark:bg-neutral-900 shadow-md py-3 px-6 flex justify-between items-center fixed top-0 left-0 w-full z-50">
@@ -49,19 +65,28 @@ export default function Navbar() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="absolute left-0 mt-2 bg-white dark:bg-neutral-800 shadow-lg rounded-lg w-48 overflow-hidden border border-gray-100 dark:border-neutral-700"
+                className="absolute left-0 mt-2 bg-white dark:bg-neutral-800 shadow-lg rounded-lg w-52 overflow-hidden border border-gray-100 dark:border-neutral-700"
               >
-                {categories.map((cat, index) => (
-                  <li key={index}>
-                    <Link
-                      to={`/services?category=${cat.toLowerCase()}`}
-                      className="block px-4 py-2 hover:bg-primary hover:text-white transition"
-                      onClick={() => setOpenMenu(false)}
-                    >
-                      {cat}
-                    </Link>
+                {loading ? (
+                  <li className="px-4 py-2 text-gray-500 text-sm">
+                    Cargando categorías...
                   </li>
-                ))}
+                ) : categories.length > 0 ? (
+                  categories.map((cat, index) => (
+                    <li key={index}>
+                      <button
+                        onClick={() => handleCategoryClick(cat)}
+                        className="block w-full text-left px-4 py-2 hover:bg-primary hover:text-white transition"
+                      >
+                        {cat}
+                      </button>
+                    </li>
+                  ))
+                ) : (
+                  <li className="px-4 py-2 text-gray-500 text-sm">
+                    Sin categorías disponibles
+                  </li>
+                )}
               </motion.ul>
             )}
           </AnimatePresence>

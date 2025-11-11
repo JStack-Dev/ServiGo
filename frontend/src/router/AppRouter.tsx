@@ -24,6 +24,7 @@ import ReportarIncidencia from "@/pages/ReportarIncidencia";
 import Mensajes from "@/pages/Mensajes";
 import ChatsDirect from "@/pages/ChatsDirect";
 import ChatDirect from "@/pages/ChatDirect"; // ✅ nueva importación
+import ProfesionalesCategoria from "@/pages/ProfesionalesCategoria";
 
 // 💬 Chat clásico
 import Chats from "@/pages/Chats";
@@ -117,6 +118,8 @@ const AppRouter = () => {
 
             {/* 📩 Mensajes */}
             <Route path="/mensajes" element={<Mensajes />} />
+
+            <Route path="/categorias/:category" element={<ProfesionalesCategoria />} />
           </Route>
         </Route>
 
