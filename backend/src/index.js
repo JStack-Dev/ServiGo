@@ -14,12 +14,11 @@ import { createServer } from "http";
 import logger, { attachLoggerSocket } from "./config/logger.js";
 import { initSocket } from "./config/socket.js";
 
-
 // 📦 Modelos base
 import Message from "./models/Message.js";
 import Notification from "./models/Notification.js";
 import Booking from "./models/Booking.js";
-import ChatDirect from "./models/ChatDirect.js"; // ✅ nuevo modelo para chat directo
+import ChatDirect from "./models/ChatDirect.js"; // ✅ Chat directo
 
 // ⚙️ Configuración de entorno
 dotenv.config();
@@ -30,7 +29,6 @@ const app = express();
 // ==============================
 // 🛡️ Seguridad avanzada
 // ==============================
-// ✅ Lista segura con patrón para subdominios Vercel
 const allowedOrigins = [
   "http://localhost:5173",
   "https://servigo-04kk.onrender.com",
@@ -39,10 +37,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin(origin, callback) {
-    // ✅ Permite peticiones sin cabecera Origin (como OPTIONS preflight)
     if (!origin) return callback(null, true);
-
-    // ✅ Permite solo los dominios seguros definidos
     if (
       allowedOrigins.some((o) =>
         o instanceof RegExp ? o.test(origin) : o === origin
@@ -50,7 +45,6 @@ const corsOptions = {
     ) {
       return callback(null, true);
     }
-
     console.warn(`❌ Origen no permitido por CORS: ${origin}`);
     return callback(new Error("Origen no permitido por CORS"));
   },
@@ -96,10 +90,7 @@ app.use((req, res, next) => {
       "Access-Control-Allow-Methods",
       "GET,POST,PUT,DELETE,PATCH,OPTIONS"
     );
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
     return res.sendStatus(204);
   }
   next();
@@ -147,7 +138,7 @@ import testRoutes from "./routes/test.routes.js";
 import serviceRoutes from "./routes/service.routes.js";
 import urgencyRoutes from "./routes/urgency.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
-import userRoutes from "./routes/user.routes.js";
+import userRoutes from "./routes/user.routes.js"; // ✅ Solo una vez
 import paymentRoutes from "./routes/payment.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
@@ -163,9 +154,7 @@ import chatRoutes from "./routes/chat.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
-import chatDirectRoutes from "./routes/chatDirect.routes.js"; 
-import userRoutes from "./routes/user.routes.js";
-
+import chatDirectRoutes from "./routes/chatDirect.routes.js";
 
 // 🧩 Registrar rutas base
 app.use("/api/auth", authRoutes);
@@ -190,7 +179,6 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/direct-chats", chatDirectRoutes);
-app.use("/api/users", userRoutes);
 
 app.get("/api", (req, res) => {
   res.json({ mensaje: "Servidor ServiGo funcionando correctamente 🚀" });
@@ -226,9 +214,7 @@ io.on("connection", (socket) => {
   logger.info(`🟢 Usuario conectado: ${socket.id}`);
   updateActiveSockets(io.engine.clientsCount);
 
-  // ===========================================
-  // 💬 CHAT NORMAL (por servicio)
-  // ===========================================
+  // 💬 Chat normal
   socket.on("joinRoom", (room) => socket.join(room));
 
   socket.on("sendMessage", async ({ serviceId, sender, receiver, content }) => {
@@ -245,27 +231,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("markAsRead", async ({ serviceId, userId }) => {
-    try {
-      const updated = await Message.updateMany(
-        { serviceId, receiver: userId, read: false },
-        { $set: { read: true } }
-      );
-      if (updated.modifiedCount > 0) {
-        io.to(`room_service_${serviceId}`).emit("messagesMarkedAsRead", {
-          serviceId,
-          userId,
-        });
-        logger.info(`📘 ${updated.modifiedCount} mensajes marcados como leídos`);
-      }
-    } catch (error) {
-      logger.error(`❌ Error al marcar mensajes como leídos: ${error.message}`);
-    }
-  });
-
-  // ===========================================
-  // 💬 CHAT DIRECTO (cliente ↔ profesional)
-  // ===========================================
+  // 💬 Chat directo
   socket.on("joinDirectChat", ({ chatId }) => {
     socket.join(`direct_${chatId}`);
     logger.info(`👥 Usuario unido a sala direct_${chatId}`);
@@ -275,18 +241,9 @@ io.on("connection", (socket) => {
     try {
       const { chatId, text, sender } = msgData;
       const chat = await ChatDirect.findById(chatId);
+      if (!chat) return logger.warn(`⚠️ Chat no encontrado: ${chatId}`);
 
-      if (!chat) {
-        logger.warn(`⚠️ Chat no encontrado: ${chatId}`);
-        return;
-      }
-
-      const message = {
-        sender,
-        text,
-        createdAt: new Date(),
-      };
-
+      const message = { sender, text, createdAt: new Date() };
       chat.messages.push(message);
       await chat.save();
 
@@ -297,55 +254,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 💭 Estado "escribiendo..."
-  socket.on("typingDirect", ({ chatId, userId }) => {
-    socket.to(`direct_${chatId}`).emit("userTypingDirect", { userId });
-  });
-
-  socket.on("stopTypingDirect", ({ chatId, userId }) => {
-    socket.to(`direct_${chatId}`).emit("userStopTypingDirect", { userId });
-  });
-
-  // ===========================================
-  // 💭 Indicadores y notificaciones
-  // ===========================================
-  socket.on("typing", ({ serviceId, userId }) =>
-    socket.to(`room_service_${serviceId}`).emit("userTyping", { userId })
-  );
-
-  socket.on("stopTyping", ({ serviceId, userId }) =>
-    socket.to(`room_service_${serviceId}`).emit("userStopTyping", { userId })
-  );
-
-  socket.on("userOnline", (userId) => {
-    onlineUsers.set(userId, socket.id);
-    io.emit("updateOnlineUsers", Array.from(onlineUsers.keys()));
-  });
-
-  socket.on("booking:created", ({ professionalId, bookingId }) => {
-    io.to(`room_user_${professionalId}`).emit("newNotification", {
-      title: "Nueva reserva",
-      message: `Tienes una nueva reserva #${bookingId} pendiente 🧾`,
-      read: false,
-      createdAt: new Date().toISOString(),
-    });
-  });
-
-  socket.on("booking:updated", ({ clientId, status }) => {
-    io.to(`room_user_${clientId}`).emit("newNotification", {
-      title: "Actualización de reserva",
-      message:
-        status === "completed"
-          ? "Tu reserva ha sido completada ✅"
-          : "Tu reserva ha sido cancelada ❌",
-      read: false,
-      createdAt: new Date().toISOString(),
-    });
-  });
-
-  // ===========================================
-  // 🔴 Desconexión
-  // ===========================================
   socket.on("disconnect", () => {
     for (const [userId, id] of onlineUsers.entries()) {
       if (id === socket.id) onlineUsers.delete(userId);
