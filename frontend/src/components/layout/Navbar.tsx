@@ -12,6 +12,7 @@ export default function Navbar() {
   const [openMenu, setOpenMenu] = useState(false);
 
   const categories = [
+    "General",
     "Carpintero",
     "Albañil",
     "Fontanero",
