@@ -27,31 +27,36 @@ dotenv.config();
 const app = express();
 
 // ==============================
-// 🛡️ Seguridad avanzada
+// 🛡️ Seguridad avanzada (CORS + Helmet + CSP)
 // ==============================
 const allowedOrigins = [
   "http://localhost:5173",
   "https://servigo-04kk.onrender.com",
+  "https://servi-go.vercel.app",
   /^https:\/\/servi-go.*\.vercel\.app$/,
+  /^https:\/\/servigo.*\.vercel\.app$/,
 ];
 
-const corsOptions = {
-  origin(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (
-      allowedOrigins.some((o) =>
-        o instanceof RegExp ? o.test(origin) : o === origin
-      )
-    ) {
-      return callback(null, true);
-    }
-    console.warn(`❌ Origen no permitido por CORS: ${origin}`);
-    return callback(new Error("Origen no permitido por CORS"));
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.some((o) =>
+          o instanceof RegExp ? o.test(origin) : o === origin
+        )
+      ) {
+        return callback(null, true);
+      }
+      console.warn(`❌ Bloqueado por CORS: ${origin}`);
+      return callback(new Error("CORS bloqueado"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Authorization"],
+  })
+);
 
 const helmetConfig = helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -62,7 +67,13 @@ const helmetConfig = helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https:"],
       styleSrc: ["'self'", "'unsafe-inline'", "https:"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https:", "wss:"],
+      connectSrc: [
+        "'self'",
+        "https:",
+        "wss:",
+        "https://servigo-04kk.onrender.com",
+        "https://servi-go.vercel.app",
+      ],
       fontSrc: ["'self'", "https:", "data:"],
       frameSrc: ["'none'"],
     },
@@ -80,7 +91,6 @@ import { recordRequest, updateActiveSockets } from "./services/metrics.service.j
 // 🧱 Middlewares globales
 // ==============================
 app.use(helmetConfig);
-app.use(cors(corsOptions));
 
 // ✅ Compatibilidad con Express 5: manejador manual para OPTIONS
 app.use((req, res, next) => {
@@ -91,6 +101,7 @@ app.use((req, res, next) => {
       "GET,POST,PUT,DELETE,PATCH,OPTIONS"
     );
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Expose-Headers", "Authorization");
     return res.sendStatus(204);
   }
   next();
