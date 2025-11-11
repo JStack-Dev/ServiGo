@@ -29,12 +29,11 @@ const app = express();
 // ==============================
 // 🛡️ Seguridad avanzada
 // ==============================
+// ✅ Lista segura con patrón para subdominios Vercel
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://servigo.vercel.app",
-  "https://servi-go.vercel.app",
-  "https://servi-go-nu7z.vercel.app",
-  "https://servigo-04kk.onrender.com"
+  "https://servigo-04kk.onrender.com",
+  /^https:\/\/servi-go.*\.vercel\.app$/,
 ];
 
 
@@ -88,6 +87,7 @@ import { recordRequest, updateActiveSockets } from "./services/metrics.service.j
 // ==============================
 app.use(helmetConfig);
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(limiter);
 app.use(speedLimiter);
 app.use(express.json());
