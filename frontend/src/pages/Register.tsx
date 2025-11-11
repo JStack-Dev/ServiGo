@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/authContext";
 import { motion } from "framer-motion";
 import { Briefcase, User } from "lucide-react";
+import type { AxiosError } from "axios";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -15,37 +16,54 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "", // 👈 se usará "cliente" o "profesional"
+    role: "", // 👈 "cliente" o "profesional"
   });
 
-  // 🧩 Manejo de cambios en inputs
+  // 🧩 Manejo de cambios en los inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   // 🚀 Enviar formulario
- const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-  if (form.password !== form.confirmPassword) {
-    alert("❌ Las contraseñas no coinciden");
-    return;
-  }
+    // ⚙️ Validaciones previas
+    if (form.password !== form.confirmPassword) {
+      alert("❌ Las contraseñas no coinciden");
+      return;
+    }
 
-  if (!form.role) {
-    alert("⚠️ Selecciona si eres Particular o Profesional");
-    return;
-  }
+    if (!form.role) {
+      alert("⚠️ Selecciona si eres Particular o Profesional");
+      return;
+    }
 
-  try {
-    await register(form.name, form.email, form.password, form.role);
-    // ✅ La redirección ya la hace automáticamente el AuthContext
-  } catch (err) {
-    console.error("❌ Error en el registro:", err);
-  }
-};
+    try {
+      await register(form.name, form.email, form.password, form.role);
+      // ✅ Redirección manejada por AuthContext
+    } catch (err: unknown) {
+      console.error("❌ Error en el registro:", err);
 
+      let backendMessage = "Error al registrarse, inténtalo de nuevo.";
 
+      // 🔍 Detectar si es un error Axios con mensaje del backend
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        (err as AxiosError<{ error?: string }>).response?.data?.error
+      ) {
+        backendMessage = (err as AxiosError<{ error?: string }>).response?.data
+          ?.error as string;
+      } else if (err instanceof Error) {
+        backendMessage = err.message;
+      }
+
+      // 📢 Mostrar mensaje claro al usuario
+      alert(backendMessage);
+    }
+  };
 
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-linear-to-br from-blue-600 via-cyan-400 to-green-300">
@@ -72,6 +90,7 @@ export default function Register() {
                        text-black placeholder-gray-400"
             required
           />
+
           <input
             type="email"
             name="email"
@@ -83,6 +102,7 @@ export default function Register() {
                        text-black placeholder-gray-400"
             required
           />
+
           <input
             type="password"
             name="password"
@@ -94,6 +114,7 @@ export default function Register() {
                        text-black placeholder-gray-400"
             required
           />
+
           <input
             type="password"
             name="confirmPassword"
@@ -139,7 +160,7 @@ export default function Register() {
             </motion.button>
           </div>
 
-          {/* 🚨 Mensaje de error */}
+          {/* 🚨 Mensaje de error global */}
           {error && (
             <p className="text-red-600 text-sm mt-2 text-center">{error}</p>
           )}
